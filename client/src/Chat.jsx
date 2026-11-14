@@ -100,7 +100,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
   const [error, setError] = useState("");
   const [micState, setMicState] = useState("idle"); // idle | recording | transcribing
   const [speaking, setSpeaking] = useState(false);
-  const [speakReplies, setSpeakReplies] = useState(() => readPref("speakReplies", true));
+  const [speakReplies, setSpeakReplies] = useState(() => readPref("speakReplies", false));
   const [theme, setThemeState] = useState(() => effectiveTheme());
   const [useCalendar, setUseCalendar] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);

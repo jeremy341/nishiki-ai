@@ -11,7 +11,7 @@ export const DEFAULT_PREFS = {
   language: "auto", // auto | de | en
   memory: true,
   webSearch: true,
-  readAloud: true,
+  readAloud: false, // replies are only read aloud when the user turns it on
   theme: "system", // system | light | dark
   voice: "alloy", // voice for read-aloud replies
   uiLanguage: "de", // language of the interface: de | en
