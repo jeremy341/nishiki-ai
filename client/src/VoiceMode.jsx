@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import OrbView from "./OrbView.jsx";
 import KoiStage from "./ui/KoiStage.jsx";
+import { squares } from "@yogesharc/thinking-orbs/renders";
 import { canRecord, startRecording, transcribe } from "./recorder.js";
 import { hasPlaybackMeter, playbackLevel, stopSpeaking, unlockSpeech } from "./speech.js";
 import { Button, IconButton } from "./ui/ui.jsx";
@@ -227,7 +228,7 @@ export default function VoiceMode({ onClose, ask, speak }) {
           style={{ transform: "scale(calc(1 + var(--level, 0) * 0.28))" }}
           className="grid place-items-center rounded-full transition-transform duration-75 will-change-transform focus-visible:outline-2 focus-visible:outline-offset-4 disabled:cursor-default"
         >
-          <OrbView status={status} size={orbSize} decorative />
+          <OrbView status={status} size={orbSize} decorative render={squares} tilt={0} />
         </button>
       </KoiStage>
 

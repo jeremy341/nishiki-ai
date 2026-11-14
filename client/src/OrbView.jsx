@@ -19,13 +19,13 @@ const LABEL = {
 };
 
 // decorative: just the dots, hidden from screen readers (use next to a text label).
-export default function OrbView({ status = "idle", size = 120, decorative = false, className = "" }) {
+export default function OrbView({ status = "idle", size = 120, decorative = false, className = "", render, tilt }) {
   const look = LOOK[status] || LOOK.idle;
   const label = t(LABEL[status] || LABEL.idle);
   if (decorative) {
     return (
       <span className={`inline-grid place-items-center text-fg ${className}`}>
-        <Orb state={look.state} variant={look.variant} size={size} />
+        <Orb state={look.state} variant={look.variant} size={size} render={render} tilt={tilt} />
       </span>
     );
   }
