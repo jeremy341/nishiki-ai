@@ -37,7 +37,7 @@ export async function runAgent(messages, ctx) {
     const message = await callModel(working, { role: ctx.voice && roleConfigured("voice") ? "voice" : "chat", userId: ctx.userId, tools: tools.length ? tools : undefined, budget,
       onText: ctx.onText,
       // Spoken answers are short because the prompt says so; the limit must still leave room for a tool call's arguments.
-      ...(ctx.voice ? { maxTokens: 900 } : {}) });
+      ...(ctx.voice ? { maxTokens: Math.max(1200, config.voice.maxTokens) } : {}) });
     const calls = message.tool_calls || [];
 
     if (!calls.length) {

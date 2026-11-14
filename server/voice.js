@@ -135,7 +135,7 @@ async function liveCall({ userId, conversationId, wav, voice, emit }) {
         audio: { voice: voice || r.voice || "alloy", format: "pcm16" },
         stream: true,
         stream_options: { include_usage: true },
-        max_tokens: 260, // about 13 seconds of speech: spoken answers are short, and audio output is the dearest part
+        max_tokens: config.voice.maxTokens,
         tools: [ASK_ASSISTANT],
         tool_choice: "auto",
         messages,
@@ -223,7 +223,7 @@ async function laneCall({ userId, conversationId, wav, voice, emit }) {
   ];
   let streamed = false;
   const message = await callModel(messages, {
-    role: "stt", userId, tools: [ASK_ASSISTANT], maxTokens: 220, temperature: 0.6,
+    role: "stt", userId, tools: [ASK_ASSISTANT], maxTokens: config.voice.maxTokens, temperature: 0.6,
     onText: (text) => {
       streamed = true;
       speaker.feed(text);
@@ -268,7 +268,7 @@ const cleanForSpeech = (text) => String(text).replace(/[*_`#>]+/g, "").replace(/
 // Reads an answer aloud while it is still being written: each finished sentence goes to the voice at once,
 // and the audio is sent in order. Nothing wrong is ever said (see tts.js); a sentence the voice refuses is left out.
 function createSpeaker({ userId, voice, emit }) {
-  const MAX_PIECES = 12;
+  const MAX_PIECES = 30;
   let pending = "";
   let count = 0;
   let spoken = 0;

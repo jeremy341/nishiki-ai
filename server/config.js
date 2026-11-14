@@ -48,6 +48,9 @@ export const config = {
   // TTS_ENABLED=0 turns it off and the browser voice is used instead.
   voice: {
     live: env("VOICE_LIVE", "1") !== "0", // fast voice mode: one audio model listens and answers
+    // Longest spoken answer, in model tokens (spoken audio is about 20 tokens per second, so 900 is about 45 seconds).
+    // The prompt keeps answers short on its own; this only stops a runaway answer, and cuts nothing off in normal use.
+    maxTokens: Number(env("VOICE_MAX_TOKENS", "900")),
   },
   tts: {
     enabled: env("TTS_ENABLED", "1") !== "0",
