@@ -337,7 +337,7 @@ const PERSONALITY = [
 ];
 const REASONING = [
   { value: "low", label: "Low" },
-  { value: "medium", label: "Medium" },
+  { value: "medium", label: "Normal" },
   { value: "high", label: "High" },
 ];
 const LANGUAGE = [

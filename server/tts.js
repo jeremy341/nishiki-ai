@@ -1,5 +1,6 @@
 import { config } from "./config.js";
 import { AppError } from "./errors.js";
+import { recordUsage } from "./ai.js";
 import { resolveRole, roleConfigured } from "./providers.js";
 
 // Voice is produced by the provider set for the "tts" job: an audio-output chat model (there is no
@@ -52,6 +53,7 @@ async function attempt(text, voice, prompt) {
         modalities: ["text", "audio"],
         audio: { voice: voice || r.voice || "alloy", format: "pcm16" },
         stream: true,
+        stream_options: { include_usage: true },
         max_tokens: 3000,
         messages: [
           { role: "system", content: prompt },
@@ -73,6 +75,7 @@ async function attempt(text, voice, prompt) {
   let buffer = "";
   const audioChunks = [];
   let transcript = "";
+  let usage = null;
   for await (const chunk of response.body) {
     buffer += decoder.decode(chunk, { stream: true });
     let newline;
@@ -83,7 +86,9 @@ async function attempt(text, voice, prompt) {
       const payload = line.slice(5).trim();
       if (payload === "[DONE]") continue;
       try {
-        const audio = JSON.parse(payload).choices?.[0]?.delta?.audio;
+        const event = JSON.parse(payload);
+        if (event.usage) usage = event.usage;
+        const audio = event.choices?.[0]?.delta?.audio;
         if (typeof audio?.data === "string") audioChunks.push(audio.data);
         if (typeof audio?.transcript === "string") transcript += audio.transcript;
       } catch {
@@ -93,13 +98,15 @@ async function attempt(text, voice, prompt) {
   }
   if (!audioChunks.length) throw new AppError(502, "The voice service returned no audio.");
   // Concatenate the base64 text first, then decode once. Decoding each piece on its own can corrupt it.
-  return { pcm: Buffer.from(audioChunks.join(""), "base64"), transcript };
+  return { pcm: Buffer.from(audioChunks.join(""), "base64"), transcript, usage, model: r.model };
 }
 
-export async function synthesizeSpeech(text, voice) {
+export async function synthesizeSpeech(text, voice, userId = null) {
   if (!serverTtsConfigured()) throw new AppError(404, "Server-side voice is not configured.");
   for (const prompt of PROMPTS) {
-    const { pcm, transcript } = await attempt(text, voice, prompt);
+    const { pcm, transcript, usage, model } = await attempt(text, voice, prompt);
+    // Spoken audio is the biggest single cost of a chat, so it is counted like everything else.
+    recordUsage(userId, "tts", "hackclub", model, usage);
     // No transcript from the provider: nothing to check against, so trust the audio.
     if (!transcript || sameWords(transcript, text)) return wavFromPcm16(pcm);
     console.warn("TTS said something other than the text; trying again");

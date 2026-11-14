@@ -3,15 +3,17 @@ import { Brain } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { t } from "../i18n/index.js";
 
-// How much the model thinks before it answers.
-// - Computer and iPad: a compact three-step segmented control sits in the message box, next to the
-//   other tools. It is a radio group: arrow keys, Home and End move the choice.
-// - Phone: a small button shows the level and opens a bottom sheet with the same control.
+// How much the model thinks before it answers: a slider with three stops, Low, Normal and High.
+// - Computer and iPad: a compact slider sits in the message box, next to the other tools. The native
+//   range input does the work (touch, mouse, arrow keys, Home/End, screen readers).
+// - Phone: a small button shows the level and opens a bottom sheet with a larger slider.
+// The stored value for "Normal" stays "medium".
 export const THINKING_LEVELS = [
   { value: "low", label: "Low", hint: "A little thinking. Fast and cheap. Good for everyday questions and voice." },
-  { value: "medium", label: "Medium", hint: "More thinking for harder questions." },
+  { value: "medium", label: "Normal", hint: "More thinking for harder questions." },
   { value: "high", label: "High", hint: "Thinks longest. Best for hard problems; slower and costs more." },
 ];
+const STOPS = THINKING_LEVELS.length - 1;
 
 export function thinkingLabel(value) {
   return t(THINKING_LEVELS.find((l) => l.value === value)?.label || "Low");
@@ -29,67 +31,65 @@ function useDesktop() {
   return desktop;
 }
 
-// Three flat segments in one hairline frame. The chosen one is raised; the rest are quiet text.
-function Segmented({ value, onChange, size }) {
+// A flat track with the accent colour up to the thumb and a dot for each stop. The transparent native
+// range input on top takes all the input, so it behaves like any slider.
+function ThinkingSlider({ value, onChange, size }) {
   const index = Math.max(0, THINKING_LEVELS.findIndex((l) => l.value === value));
-  const refs = useRef([]);
-  const sizes = size === "sheet" ? "h-11 text-sm" : "h-7 text-[12px]";
+  const last = useRef(index);
+  const big = size === "sheet";
+  const thumb = big ? 28 : 16;
+  const inset = thumb / 2;
+  const at = (i) => `calc(${inset}px + (100% - ${thumb}px) * ${i / STOPS})`;
 
   function choose(next) {
-    if (next === index) return;
+    if (next === last.current) return;
+    last.current = next;
     navigator.vibrate?.(6); // Android only; iPhone Safari has no vibration API
     onChange(THINKING_LEVELS[next].value);
   }
 
-  function onKeyDown(event) {
-    const last = THINKING_LEVELS.length - 1;
-    let next = null;
-    if (event.key === "ArrowRight" || event.key === "ArrowDown") next = Math.min(last, index + 1);
-    else if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = Math.max(0, index - 1);
-    else if (event.key === "Home") next = 0;
-    else if (event.key === "End") next = last;
-    if (next === null) return;
-    event.preventDefault();
-    choose(next);
-    refs.current[next]?.focus();
-  }
-
   return (
-    <div
-      role="radiogroup"
-      aria-label={t("Thinking level")}
-      onKeyDown={onKeyDown}
-      className="grid grid-cols-3 gap-0.5 rounded-md border border-border bg-surface p-0.5"
-    >
-      {THINKING_LEVELS.map((level, i) => {
-        const on = i === index;
-        return (
-          <button
-            key={level.value}
-            ref={(el) => { refs.current[i] = el; }}
-            type="button"
-            role="radio"
-            aria-checked={on}
-            tabIndex={on ? 0 : -1}
-            onClick={() => choose(i)}
-            className={`${sizes} min-w-0 rounded-[4px] px-3 font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-fg ${
-              on ? "bg-raised text-fg" : "text-fg-subtle hover:text-fg"
-            }`}
-          >
-            {t(level.label)}
-          </button>
-        );
-      })}
+    <div className={`relative w-full select-none ${big ? "h-11" : "h-7"}`}>
+      <div className={`absolute inset-x-0 top-1/2 -translate-y-1/2 rounded-full bg-border-strong ${big ? "h-1.5" : "h-1"}`} />
+      <div
+        className={`absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-accent transition-[width] duration-150 ease-[var(--ease-snappy)] ${big ? "h-1.5" : "h-1"}`}
+        style={{ width: at(index) }}
+      />
+      {THINKING_LEVELS.map((level, i) => (
+        <span
+          key={level.value}
+          aria-hidden="true"
+          className={`absolute top-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full ${i <= index ? "bg-accent-fg/70" : "bg-fg-subtle"}`}
+          style={{ left: at(i) }}
+        />
+      ))}
+      <span
+        aria-hidden="true"
+        className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border-strong bg-surface shadow-sm transition-[left,box-shadow] duration-150 ease-[var(--ease-snappy)] peer-focus-visible:ring-2 peer-focus-visible:ring-accent"
+        style={{ left: at(index), width: thumb, height: thumb }}
+      />
+      <input
+        type="range"
+        min={0}
+        max={STOPS}
+        step={1}
+        value={index}
+        aria-label={t("Thinking level")}
+        aria-valuetext={thinkingLabel(value)}
+        onChange={(e) => choose(Number(e.target.value))}
+        className="peer absolute inset-0 m-0 h-full w-full cursor-pointer appearance-none opacity-0"
+      />
     </div>
   );
 }
 
-// The inline control in the message box (computer and iPad).
+// The inline control in the message box (computer and iPad): icon, slider, current level.
 function InlineThinking({ value, onChange }) {
   return (
     <div className="flex items-center gap-2 pl-1.5 text-fg-subtle">
       <Brain size={14} aria-hidden="true" className="shrink-0" />
-      <Segmented value={value} onChange={onChange} size="inline" />
+      <div className="w-24"><ThinkingSlider value={value} onChange={onChange} size="inline" /></div>
+      <span className="w-12 text-[12px] text-fg-muted" aria-hidden="true">{thinkingLabel(value)}</span>
     </div>
   );
 }
@@ -127,9 +127,14 @@ export default function Thinking({ value, onChange }) {
               </DialogPrimitive.Close>
             </header>
             <DialogPrimitive.Description className="sr-only">{t("Thinking level")}</DialogPrimitive.Description>
-            <div className="grid gap-3 px-4 pb-2 pt-4">
-              <Segmented value={value} onChange={onChange} size="sheet" />
-              <p className="min-h-[3rem] text-sm leading-6 text-fg-muted" aria-live="polite">{t(level.hint)}</p>
+            <div className="grid gap-2 px-6 pb-2 pt-5">
+              <ThinkingSlider value={value} onChange={onChange} size="sheet" />
+              <div className="flex justify-between text-[13px] text-fg-muted" aria-hidden="true">
+                {THINKING_LEVELS.map((l) => (
+                  <span key={l.value} className={l.value === value ? "font-medium text-fg" : ""}>{t(l.label)}</span>
+                ))}
+              </div>
+              <p className="mt-2 min-h-[3rem] text-sm leading-6 text-fg-muted" aria-live="polite">{t(level.hint)}</p>
             </div>
           </DialogPrimitive.Content>
         </DialogPrimitive.Portal>

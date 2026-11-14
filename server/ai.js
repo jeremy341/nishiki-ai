@@ -13,7 +13,7 @@ function cleanModelText(text) {
   return text.replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/<\/?think>/gi, "").trim();
 }
 
-function recordUsage(userId, role, provider, model, usage) {
+export function recordUsage(userId, role, provider, model, usage) {
   if (!userId || !usage) return;
   const prompt = Number(usage.prompt_tokens) || 0;
   const completion = Number(usage.completion_tokens) || 0;

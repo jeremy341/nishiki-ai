@@ -656,7 +656,7 @@ app.delete("/api/apps/:id/token", requireUser, (req, res) => {
 
 app.post("/api/tts", requireUser, voiceLimiter, async (req, res) => {
   const { text } = parse(z.object({ text: z.string().trim().min(1).max(2000) }), req.body);
-  const audio = await synthesizeSpeech(text, getPrefs(req.user.id).voice);
+  const audio = await synthesizeSpeech(text, getPrefs(req.user.id).voice, req.user.id);
   res.set({
     "Content-Type": AUDIO_MIME[ttsFormat()] || "application/octet-stream",
     "Cache-Control": "no-store",
