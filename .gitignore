@@ -10,3 +10,6 @@ data-test/
 
 # Demo data for screenshots
 data-demo/
+
+# Server logs
+*.log
