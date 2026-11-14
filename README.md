@@ -13,17 +13,11 @@ A small, login-protected personal assistant web app. You create a login for your
 - **Voice out:** read-aloud uses an audio model on Hack Club AI (`openai/gpt-audio-mini`), with the browser voice as fallback.
 - **Orb:** [`@yogesharc/thinking-orbs`](https://www.npmjs.com/package/@yogesharc/thinking-orbs) (MIT). States: idle, listening, thinking, speaking, error.
 
-## Screenshots
+## Screenshot
 
-Demo account with sample chats. The answers come from a test model, so the text is only an example.
+The home screen with the koi pond look. Demo account, sample data.
 
-| | |
-|---|---|
-| ![Home, koi pond look](docs/screenshots/01-home.png) | ![Smart UI chart in a chat](docs/screenshots/02-smart-ui-chart.png) |
-| ![Smart UI key figures](docs/screenshots/03-smart-ui-stats.png) | ![Smart UI cards](docs/screenshots/04-smart-ui-cards.png) |
-| ![Smart UI table](docs/screenshots/05-smart-ui-table.png) | ![Phone layout](docs/screenshots/06-phone-chat.png) |
-| ![Settings: look](docs/screenshots/07-settings-look.png) | ![Admin: AI models and key](docs/screenshots/08-admin-ai-key.png) |
-| ![Command palette (Ctrl/Cmd+K)](docs/screenshots/09-command-palette.png) | |
+![Home screen, koi pond look](docs/screenshots/01-home.png)
 
 ## Run it on your computer first
 
