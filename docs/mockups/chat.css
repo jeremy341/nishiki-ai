@@ -1,0 +1,71 @@
+/* Chat screen (a quiet screen: no koi, no pond). Tokens, fonts and the phone frame come from mock.css.
+   Everything here is scoped to body.chat so the other mockups are not affected. */
+
+/* Paper: the DESIGN.md "raised" (#ebe5d8) is almost the same as the canvas (#e9e4da), so your bubble and the + button
+   would vanish. A step darker keeps the same hue. Pond keeps its own value from mock.css. */
+:root { --raised: #e0d9c8; }
+:root[data-theme="pond"] { --raised: #1a4553; }
+
+.chat { font-feature-settings: "tnum" 1; }
+
+/* status bar (47px) and home indicator: only here so the screen reads as a phone */
+.chat .status { display: flex; align-items: center; justify-content: space-between; padding: 12px 30px 0 46px; color: var(--fg); }
+.chat .status time { font: 600 16px/20px var(--sans); letter-spacing: -0.01em; }
+.chat .status svg { height: 13px; width: auto; fill: currentColor; }
+.chat .home-bar { position: absolute; left: 50%; bottom: 8px; width: 134px; height: 5px; margin-left: -67px; border-radius: 3px; background: var(--fg); }
+
+/* header: toggle, orb + title, new chat. A hairline under it. */
+.chat .bar { justify-content: flex-start; gap: 0; border-bottom: 1px solid var(--border); }
+.chat .heading { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding-left: 6px; }
+.chat .heading .orb { flex: none; }
+.chat .heading h1 { margin: 0; min-width: 0; font: 500 17px/24px var(--serif); letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* conversation: 20px side margins, 22px between turns */
+.chat .feed { flex: 1; min-height: 0; overflow: hidden; padding: 18px 20px 0; display: flex; flex-direction: column; gap: 22px; }
+
+.chat .me { align-self: flex-end; max-width: 78%; margin: 0; padding: 10px 14px; background: var(--raised); border-radius: 18px; font-size: 16px; line-height: 24px; text-wrap: pretty; }
+.chat .ai { display: flex; flex-direction: column; align-items: flex-start; }
+.chat .say { margin: 0; max-width: 34ch; font-size: 16px; line-height: 27px; text-wrap: pretty; }
+
+/* confirm card */
+.chat .card { width: 100%; max-width: 326px; margin-top: 12px; padding: 14px 16px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.chat .card .what { margin: 4px 0 0; font-size: 17px; line-height: 24px; }
+.chat .card .when { margin: 3px 0 0; font: 400 13px/20px var(--mono); letter-spacing: 0.02em; color: var(--fg-muted); }
+.chat .card .choices { display: flex; gap: 8px; margin-top: 14px; }
+.chat .btn { cursor: default; }
+
+/* quiet action row: thin 18px icons, the first glyph sits on the text edge */
+.chat .acts { display: flex; align-items: center; margin: 2px 0 0 -9px; color: var(--fg-subtle); }
+.chat .acts button { width: 36px; height: 36px; display: grid; place-items: center; padding: 0; background: none; border: 0; color: inherit; }
+.chat .acts svg, .chat .d-mic svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.chat .acts .caption { margin-left: 8px; }
+
+/* weather strip: hairlines and mono numbers, no icons, no box */
+.chat .wx { width: 100%; max-width: 326px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-strong); display: grid; grid-template-columns: repeat(3, 1fr); column-gap: 20px; }
+.chat .wx > div { min-width: 0; color: var(--fg-muted); }
+.chat .wx > div.now { color: var(--fg); }
+.chat .wx .d { display: block; margin-bottom: 4px; }
+.chat .wx > div.now .d { color: var(--fg); }
+.chat .wx .t { display: flex; align-items: baseline; gap: 8px; font-family: var(--mono); }
+.chat .wx .hi { font-size: 22px; line-height: 26px; letter-spacing: -0.03em; }
+.chat .wx .lo { font-size: 13px; line-height: 20px; color: var(--fg-subtle); }
+.chat .wx .rg { position: relative; height: 1px; margin: 8px 0 8px; background: var(--border-strong); }
+.chat .wx .rg::after { content: ""; position: absolute; top: -1px; left: var(--a); width: calc(var(--b) - var(--a)); height: 3px; border-radius: 2px; background: currentColor; }
+.chat .wx .c { display: block; }
+.chat .src { margin: 10px 0 0; }
+
+/* the message pill: + | field with mic | voice orb (becomes a send arrow while typing) */
+.chat .dock { padding: 8px 20px 28px; gap: 8px; align-items: flex-end; }
+.chat .d-plus, .chat .d-go { width: 40px; height: 40px; flex: none; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; }
+.chat .d-plus { background: var(--raised); color: var(--fg); }
+.chat .d-plus svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; }
+.chat .d-field { flex: 1; min-width: 0; min-height: 40px; display: flex; align-items: flex-end; gap: 6px; padding: 7px 14px 7px 16px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 20px; }
+.chat .d-field .ph, .chat .d-field .typed { flex: 1; min-width: 0; margin: 0; font-size: 16px; line-height: 24px; }
+.chat .d-field .ph { color: var(--fg-subtle); }
+.chat .d-field .typed { color: var(--fg); text-wrap: balance; }
+.chat .caret { display: inline-block; width: 1.5px; height: 19px; margin: 0 0 -4px 1px; background: var(--fg); }
+.chat .d-mic { width: 32px; height: 32px; margin: -4px -8px -4px 0; flex: none; display: grid; place-items: center; padding: 0; background: none; border: 0; color: var(--fg-muted); }
+.chat .d-go { background: var(--fg); color: var(--canvas); }
+.chat .d-go .orb rect { fill: var(--canvas); }
+.chat .d-go.send { background: var(--accent); color: var(--accent-fg); }
+.chat .d-go.send svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }

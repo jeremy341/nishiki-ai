@@ -3,6 +3,45 @@
 How Nishiki looks, in one place. The start screen and the sign-in screen are the reference: everything else is
 made to feel like the same room. When a screen and this file disagree, fix the screen (or change this file on purpose).
 
+## Decisions (2026-11-14, from the owner's answers: these override anything below that disagrees)
+
+**Who and where.** The owner and a few friends, mostly on an iPhone held in one hand, sometimes on a Mac or iPad at a desk.
+So: main controls at the bottom within thumb reach, nothing important in the top corners; the wide layout keeps the sidebar visible.
+
+**Mood: calm by default, alive when you play.** Reading, planning and settings screens are quiet (space, hairlines, no
+animation but fades). The koi and the orb come out on the **home screen**, the **voice screen** and the **start/sign-in
+screens**, and nowhere else. No pond watermark behind conversations.
+
+**How Japanese: medium, without Japanese characters.** The feeling comes from: paper and ink colours, a lot of empty space
+(ma), asymmetric placement (the orb and greeting sit slightly off the centre line, captions hang at the left edge), thin
+brush-like dividers (the wave rule), a Mincho-style serif for headings, and slow fades. **No Japanese characters anywhere.**
+
+**Layout: our own, built on the orb.**
+- **Header:** a sidebar toggle on the left (two-line icon), the chat title, and a "new chat" button on the right. **No account
+  button** in the header (the round letter button is removed). The account (name, settings, sign out) lives only in the sidebar footer.
+- **Home screen (new chat):** the koi pond fills the screen behind, a clearing around the **orb**, which is the main button
+  (tap = talk). Below it the greeting in the Mincho serif, one quiet caption line for today ("18:30 zahnarzt · 2 erinnerungen ·
+  8° bewölkt", tap for details) and the message pill at the bottom. No starter cards, no big widgets.
+- **Message box:** a pill like ChatGPT's: a round **+** on the left (camera, photos, files, calendar), the text field with the
+  mic inside, and a round button on the right that is a small orb when the field is empty (tap = voice) and a send arrow when you type.
+- **Orb:** the main button on the home screen, the small voice button in the pill, the assistant's state next to the chat
+  title, the voice screen, and **the logo** (app icon, sign-in card, wordmark mark). It replaces the pixel koi glyph as the
+  mark. The koi glyph stays for empty and loading states.
+- **Sidebar:** restyled, but **the pond window is removed**. Projects, search, library, tasks, apps and the chat list stay.
+- **Confirm cards:** stay a card in the chat with Confirm (vermilion) and Cancel.
+
+**Type.** Headings and greetings: a Mincho-style serif (Shippori Mincho). Answers and body: the plain sans. Labels, captions,
+times: Geist Mono, small, lowercase. Icons: thin line icons, fewer of them.
+
+**Colour and theme.** The palette stays (pond teal, paper cream, koi vermilion). **The default theme is paper (light)**; pond
+(dark) is one tap away and is remembered.
+
+**Touch.** Haptics on iPhone (send, orb tap, confirm), water ripples when you tap empty space on the home screen, and a
+quiet water-drop sound when you send and when a reply arrives (switchable in Settings).
+
+**Not yet decided:** the sign-in card (the orb at its top looked wrong to the owner; proposal: orb large on the pond, no card
+chrome around it), the voice screen details, the tasks/calendar/library pages beyond the existing restyle.
+
 ## The idea
 
 **A koi pond at the edge of a quiet page.** Water, paper and ink. Big, slow, pixel-ASCII koi swim at the edges.
@@ -27,7 +66,7 @@ sign-in screens use the same two and follow the account's theme (not only the de
 |---|---|---|---|
 | `--canvas` | `#0e2a32` | `#e9e4da` | the page, the water |
 | `--surface` | `#12353f` | `#f3efe6` | sidebar, cards, the composer |
-| `--raised` | `#184452` | `#ebe5d8` | hovered rows, your messages, chips |
+| `--raised` | `#184452` | `#e0d9c8` | hovered rows, your messages, chips (paper value changed from `#ebe5d8`, which vanished on the page) |
 | `--overlay` | `#12353f` | `#f3efe6` | menus, dialogs, sheets |
 | `--border` | `#224d59` | `#d9d1bf` | hairlines |
 | `--border-strong` | `#35707d` | `#b9ae97` | hairlines on focus/hover, tracks |

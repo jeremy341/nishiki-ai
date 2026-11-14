@@ -1,0 +1,54 @@
+@import url("https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Geist+Mono:wght@400;500&display=swap");
+
+/* Paper (light) is the default theme. Tokens from DESIGN.md. */
+:root {
+  --canvas: #e9e4da; --surface: #f3efe6; --raised: #ebe5d8; --border: #d9d1bf; --border-strong: #b9ae97;
+  --fg: #1c1a17; --fg-muted: #564f46; --fg-subtle: #6a6358; --accent: #9e3214; --accent-fg: #f7f2e8;
+  --mono: "Geist Mono", ui-monospace, Menlo, monospace;
+  --serif: "Shippori Mincho", "Noto Serif Display", Georgia, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+}
+:root[data-theme="pond"] {
+  --canvas: #0e2a32; --surface: #12343e; --raised: #1a4553; --border: #2a5663; --border-strong: #41808f;
+  --fg: #ebe6dc; --fg-muted: #cdc6b8; --fg-subtle: #b0aa9e; --accent: #e8784f; --accent-fg: #1a0f0a;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--canvas); color: var(--fg); font-family: var(--sans); -webkit-font-smoothing: antialiased; overflow: hidden; }
+
+.phone { position: relative; width: 390px; height: 844px; overflow: hidden; background: var(--canvas); }
+#pond { position: absolute; inset: 0; width: 100%; height: 100%; }
+.layer { position: absolute; inset: 0; display: flex; flex-direction: column; }
+
+.status { height: 47px; flex: none; }
+.bar { height: 48px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; }
+.icon-btn { width: 44px; height: 44px; display: grid; place-items: center; color: var(--fg); background: none; border: 0; }
+.icon-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.caption { font-family: var(--mono); font-size: 11px; line-height: 16px; letter-spacing: 0.06em; text-transform: lowercase; color: var(--fg-subtle); }
+
+/* the orb */
+.orb { display: block; }
+.orb rect { fill: var(--fg); }
+
+/* message pill */
+.dock { flex: none; padding: 8px 12px 28px; display: flex; align-items: flex-end; gap: 8px; }
+.plus { width: 40px; height: 40px; border-radius: 50%; background: var(--raised); display: grid; place-items: center; color: var(--fg); flex: none; }
+.plus svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; }
+.pill { flex: 1; min-height: 40px; border: 1px solid var(--border-strong); background: var(--surface); border-radius: 20px; display: flex; align-items: center; padding: 0 6px 0 16px; gap: 8px; }
+.pill span { flex: 1; font-size: 16px; color: var(--fg-subtle); }
+.pill .mic { width: 32px; height: 32px; display: grid; place-items: center; color: var(--fg-muted); }
+.pill .mic svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.voice { width: 40px; height: 40px; border-radius: 50%; background: var(--fg); display: grid; place-items: center; flex: none; }
+.voice .orb rect { fill: var(--canvas); }
+
+/* bubbles and cards */
+.you { align-self: flex-end; max-width: 78%; background: var(--raised); border-radius: 18px; padding: 10px 14px; font-size: 16px; line-height: 24px; }
+.answer { font-size: 16px; line-height: 27px; max-width: 34ch; }
+.hair { height: 1px; background: var(--border); }
+.confirm { border: 1px solid var(--border-strong); background: var(--surface); border-radius: 8px; padding: 14px; display: grid; gap: 10px; }
+.confirm .row { display: flex; gap: 8px; }
+.btn { font-family: var(--mono); font-size: 13px; font-weight: 500; height: 36px; padding: 0 14px; border-radius: 6px; display: inline-flex; align-items: center; border: 1px solid var(--border-strong); background: transparent; color: var(--fg); }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+.actions { display: flex; gap: 4px; align-items: center; color: var(--fg-subtle); }
+.actions svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; margin: 7px; }
