@@ -51,6 +51,9 @@ async function post(url, apiKey, body, timeoutMs) {
   return response.json().catch(() => null);
 }
 
+// Extra output room for the thinking setting, because thinking tokens count toward max_tokens.
+const REASONING_HEADROOM = { none: 0, low: 1000, medium: 3000, high: 6000 };
+
 // One model call for a job ("chat", "stt", "tts"). Returns the assistant message, which may
 // contain tool_calls instead of text. Token counts are recorded against the user.
 export async function callModel(messages, {
@@ -59,6 +62,7 @@ export async function callModel(messages, {
   maxTokens = config.ai.maxTokens,
   temperature = 0.6,
   tools,
+  budget, // { used } for one reply: tokens used so far, across its tool steps
 } = {}) {
   const r = resolveRole(role);
   const body = { model: r.model, messages, max_tokens: maxTokens, temperature };
@@ -68,12 +72,15 @@ export async function callModel(messages, {
   }
   // The user's thinking setting, for models that offer it (chat answers only).
   if (role === "chat" && userId && await supportsReasoning(r.model)) {
-    body.reasoning = { effort: getPrefs(userId).reasoning };
+    const effort = getPrefs(userId).reasoning;
+    body.reasoning = { effort };
+    body.max_tokens = maxTokens + (REASONING_HEADROOM[effort] ?? 0);
   }
   const data = await post(`${r.baseUrl}/chat/completions`, r.apiKey, body, 90_000);
   const message = data?.choices?.[0]?.message;
   if (!message) throw new AppError(502, "The AI returned an empty answer.");
   recordUsage(userId, role, r.providerId, r.model, data.usage);
+  if (budget && data.usage) budget.used += Number(data.usage.total_tokens) || 0;
   if (typeof message.content === "string") message.content = cleanModelText(message.content);
   return message;
 }

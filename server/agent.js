@@ -1,4 +1,5 @@
 import { callModel } from "./ai.js";
+import { config } from "./config.js";
 import { AppError } from "./errors.js";
 import { activityLabel, runTool, toolSpecs } from "./tools.js";
 
@@ -9,9 +10,13 @@ const MAX_STEPS = 6;
 export async function runAgent(messages, ctx) {
   const tools = toolSpecs(ctx);
   const working = [...messages];
+  const budget = { used: 0 };
 
   for (let step = 0; step < MAX_STEPS; step += 1) {
-    const message = await callModel(working, { role: "chat", userId: ctx.userId, tools: tools.length ? tools : undefined });
+    if (budget.used > config.ai.maxTurnTokens) {
+      throw new AppError(502, "That answer needed too much work. Ask for a smaller part.");
+    }
+    const message = await callModel(working, { role: "chat", userId: ctx.userId, tools: tools.length ? tools : undefined, budget });
     const calls = message.tool_calls || [];
 
     if (!calls.length) {
@@ -40,7 +45,7 @@ export async function runAgent(messages, ctx) {
       working.push({
         role: "tool",
         tool_call_id: call.id,
-        content: JSON.stringify(result).slice(0, 24000),
+        content: JSON.stringify(result).slice(0, config.ai.toolOutputChars),
       });
     }
   }

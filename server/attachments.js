@@ -208,10 +208,13 @@ export function modelContent(message, attachments, withData, userId) {
 // Which messages (by id) are recent enough to include their binary data.
 export function recentWithData(messages, attachmentMap) {
   const ids = new Set();
+  let bytes = 0;
   for (const m of [...messages].reverse()) {
     if (m.role !== "user" || !attachmentMap.has(m.id)) continue;
+    const size = attachmentMap.get(m.id).reduce((n, a) => n + (a.size || 0), 0);
+    if (ids.size >= RECENT_WITH_DATA || bytes + size > config.ai.attachmentBytesPerRequest) continue;
     ids.add(m.id);
-    if (ids.size >= RECENT_WITH_DATA) break;
+    bytes += size;
   }
   return ids;
 }

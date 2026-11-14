@@ -90,7 +90,7 @@ The assistant calls tools when they help. Read-only tools run at once. Anything 
 
 The user never sees tool calls. Under each answer a short line says what was used (for example "Searched your Gmail"). Tool results stay out of the chat.
 
-Limits: up to 6 tool steps per reply, 24 KB of tool output, PDFs up to 30,000 characters. Text from web pages and connectors is treated as information, not instructions.
+Limits per reply: up to 6 tool steps, 8 KB of tool output per step, about 60,000 model tokens in total (`AI_MAX_TURN_TOKENS`). Per request: 60,000 characters of chat history (`HISTORY_CHARS`) and 8 MB of photos and PDFs (`ATTACHMENT_BYTES_PER_REQUEST`). The thinking setting adds room to the answer length, so a long answer is not cut off. Nothing is limited per day per person. Text from web pages and connectors is treated as information, not instructions.
 
 Confirmations happen in the chat. In conversation mode the orb covers the chat, so close it to tap Confirm.
 

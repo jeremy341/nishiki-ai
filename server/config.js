@@ -32,7 +32,10 @@ export const config = {
     maxTokens: Number(env("AI_MAX_TOKENS", "1500")),
     // How much of a chat is sent to the model per reply (characters, roughly 4 per token).
     // Older parts beyond this are summarized, not dropped.
-    historyChars: Number(env("HISTORY_CHARS", "240000")),
+    historyChars: Number(env("HISTORY_CHARS", "60000")), // chat history sent per request, in characters
+    maxTurnTokens: Number(env("AI_MAX_TURN_TOKENS", "60000")), // all model tokens one reply may use, across its tool steps
+    toolOutputChars: Number(env("TOOL_OUTPUT_CHARS", "8000")), // tool result sent back to the model, per tool call
+    attachmentBytesPerRequest: Number(env("ATTACHMENT_BYTES_PER_REQUEST", String(8 * 1024 * 1024))), // photos and PDFs sent as data per request
   },
 
   // Speech-to-text: a dedicated audio model on Hack Club AI (WAV in, text out).
