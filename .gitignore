@@ -7,3 +7,6 @@ data/
 
 # Local test data
 data-test/
+
+# Demo data for screenshots
+data-demo/
