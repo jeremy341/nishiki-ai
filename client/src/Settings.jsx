@@ -1471,7 +1471,7 @@ function PasswordReset({ userId }) {
   );
 }
 
-const ROLE_LABEL = { chat: "Chat", stt: "Speech to text", tts: "Voice (read aloud)" };
+const ROLE_LABEL = { chat: "Chat", voice: "Voice conversation", stt: "Speech to text", tts: "Voice (read aloud)" };
 
 // AI models. There is one provider, Hack Club AI; the admin only picks the model for each job.
 
@@ -1480,18 +1480,28 @@ const JOBS = [
     role: "chat",
     label: "Chat",
     hint: "Writes the answers. Needs text in and text out.",
+    prefer: "anthropic/claude-haiku-5.5",
+    fits: (m) => m.input.includes("text") && m.output.includes("text"),
+  },
+  {
+    role: "voice",
+    label: "Voice conversation",
+    hint: "Writes the answers in voice mode. Pick a fast model: it decides how soon the reply starts.",
+    prefer: "openai/gpt-6-luna",
     fits: (m) => m.input.includes("text") && m.output.includes("text"),
   },
   {
     role: "stt",
     label: "Speech to text",
     hint: "Turns your voice into text. Needs audio in.",
+    prefer: "mistralai/voxtral-small-24b-2507",
     fits: (m) => m.input.includes("audio") && m.output.includes("text"),
   },
   {
     role: "tts",
     label: "Read-aloud voice",
     hint: "Speaks the answers. Needs audio out.",
+    prefer: "openai/gpt-audio-mini",
     fits: (m) => m.output.includes("audio"),
   },
 ];
@@ -1630,7 +1640,9 @@ function ModelPicker({ job, value, voices, formats, onChange, onTest }) {
       const needle = search.trim().toLowerCase();
       return !needle || `${m.id} ${m.name}`.toLowerCase().includes(needle);
     });
-  const shown = list.slice(0, LIMIT);
+  // The recommended model for the job always comes first, then the rest in Hack Club's order.
+  const ordered = [...list].sort((a, b) => Number(b.id === job.prefer) - Number(a.id === job.prefer));
+  const shown = ordered.slice(0, LIMIT);
   if (value.model && !shown.some((m) => m.id === value.model)) {
     shown.unshift({ id: value.model, name: value.model });
   }
@@ -1662,11 +1674,6 @@ function ModelPicker({ job, value, voices, formats, onChange, onTest }) {
           <Field label={t("Voice")} className="min-w-0">
             <Select value={value.voice || "alloy"} onChange={(e) => onChange({ ...value, voice: e.target.value })}>
               {voices.map((v) => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
-            </Select>
-          </Field>
-          <Field label={t("Audio format")} className="min-w-0">
-            <Select value={value.format || "mp3"} onChange={(e) => onChange({ ...value, format: e.target.value })}>
-              {formats.map((f) => <option key={f} value={f}>{f}</option>)}
             </Select>
           </Field>
         </div>

@@ -73,7 +73,7 @@ export async function callModel(messages, {
     body.tool_choice = "auto";
   }
   // The user's thinking setting, for models that offer it (chat answers only).
-  if (role === "chat" && userId && await supportsReasoning(r.model)) {
+  if ((role === "chat" || role === "voice") && userId && await supportsReasoning(r.model)) {
     // There is no "off": the lowest level is "low".
     const chosen = effortOverride || getPrefs(userId).reasoning;
     const effort = chosen === "none" ? "low" : chosen;

@@ -14,7 +14,7 @@ const MODELS_TTL_MS = 10 * 60 * 1000;
 const VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
 const FORMATS = ["mp3", "wav", "flac", "opus"];
 
-export const ROLES = ["chat", "stt", "tts"];
+export const ROLES = ["chat", "voice", "stt", "tts"];
 
 let rolesCache = null;
 let modelsCache = null;
@@ -22,6 +22,7 @@ let modelsCache = null;
 function defaults() {
   return {
     chat: { model: config.ai.model },
+    voice: { model: config.ai.voiceModel },
     stt: { model: config.stt.model },
     tts: { model: config.tts.model, voice: config.tts.voice, format: config.tts.format },
   };
@@ -164,13 +165,14 @@ export function saveRoles(input) {
   const next = { ...loadRoles() };
   for (const role of ROLES) {
     const r = input?.roles?.[role];
+    if (!r && role === "voice") continue; // older pages do not send the voice model; keep the saved one
     if (!r || typeof r.model !== "string" || !r.model.trim() || r.model.length > 120) {
       throw new AppError(400, `Pick a model for ${role}.`);
     }
     next[role] = { model: r.model.trim() };
     if (role === "tts") {
       next[role].voice = VOICES.includes(r.voice) ? r.voice : "alloy";
-      next[role].format = FORMATS.includes(r.format) ? r.format : "mp3";
+      next[role].format = "wav";
     }
   }
   saveRolesRow(next);

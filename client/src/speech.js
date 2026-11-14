@@ -31,12 +31,6 @@ export function unlockSpeech() {
 export async function speak(text, { useServerVoice, onStart, onEnd, onError }) {
   stopSpeaking();
   if (useServerVoice) {
-    let fellBack = false;
-    const fallback = () => {
-      if (fellBack) return;
-      fellBack = true;
-      speakInBrowser(text, { onStart, onEnd, onError });
-    };
     const run = ++playRun;
     const pieces = splitForSpeech(text);
     // The next pieces are requested while the current one plays, so there is no gap between sentences.
@@ -49,15 +43,10 @@ export async function speak(text, { useServerVoice, onStart, onEnd, onError }) {
     };
     request(0);
     request(1);
+    let i = 0;
     try {
-      for (let i = 0; i < pieces.length; i += 1) {
-        let blob;
-        try {
-          blob = await fetched[i];
-        } catch (error) {
-          if (i === 0) throw error;
-          continue; // a lost sentence in the middle is skipped
-        }
+      for (; i < pieces.length; i += 1) {
+        const blob = await fetched[i];
         if (run !== playRun) return;
         request(i + 2);
         await playBlob(blob, run, i === 0 ? onStart : undefined);
@@ -65,9 +54,10 @@ export async function speak(text, { useServerVoice, onStart, onEnd, onError }) {
       }
       onEnd?.();
     } catch {
+      // The server voice failed for this sentence (it refuses to say anything other than the text).
+      // The browser voice reads from here on, so nothing is skipped and nothing wrong is said.
       if (run === playRun) {
-        if (!started(run)) fallback();
-        else onEnd?.();
+        speakInBrowser(pieces.slice(i).join(" "), { onStart: started(run) ? undefined : onStart, onEnd, onError });
       }
     }
     return;

@@ -138,16 +138,16 @@ api.delete("/admin/ai/key", requireUser, requireAdmin, (req, res) => {
 });
 
 api.post("/admin/ai/test", requireUser, requireAdmin, async (req, res) => {
-  const { role } = parse(z.object({ role: z.enum(["chat", "stt", "tts"]) }), req.body);
+  const { role } = parse(z.object({ role: z.enum(["chat", "voice", "stt", "tts"]) }), req.body);
   if (!roleConfigured(role)) {
     return res.json({ ok: false, detail: "Not set up: HACKCLUB_API_KEY is missing, or no model is chosen." });
   }
-  if (role !== "chat") {
+  if (role !== "chat" && role !== "voice") {
     return res.json({ ok: true, detail: `${role} is configured. It is checked when used, to avoid spending on a test.` });
   }
   const answer = await chatCompletion([
     { role: "user", content: "Reply with the single word: ok" },
-  ], { role: "chat", userId: req.user.id, maxTokens: 10, temperature: 0 });
+  ], { role, userId: req.user.id, maxTokens: 10, temperature: 0 });
   res.json({ ok: true, detail: `Hack Club AI answered: ${answer.slice(0, 40)}` });
 });
 
