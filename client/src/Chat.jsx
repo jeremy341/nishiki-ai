@@ -12,6 +12,7 @@ import Composer from "./chat/Composer.jsx";
 import Message from "./chat/Message.jsx";
 import { kindFor, MAX_BYTES, PICKER_ACCEPT, uploadFile } from "./files.js";
 import KoiPanel from "./ui/KoiPanel.jsx";
+import { ChatSkeleton } from "./ui/Loading.jsx";
 import CommandPalette from "./ui/CommandPalette.jsx";
 import { CalendarClock, FileText, Library as LibraryIcon, LayoutGrid, MessageSquare } from "lucide-react";
 import { useStyle } from "./style.js";
@@ -116,6 +117,8 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  // True while the open chat's messages are on their way, so the start screen does not flash up.
+  const [loadingChat, setLoadingChat] = useState(() => readActiveId() !== null);
   // Cmd/Ctrl+K opens the command palette.
   useEffect(() => {
     const onKey = (event) => {
@@ -174,9 +177,13 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
         const stored = readActiveId();
         const chosen = data.conversations.find((c) => c.id === stored);
         if (chosen) return selectConversation(chosen.id);
+        setLoadingChat(false);
         return null;
       })
-      .catch((err) => handleError(err));
+      .catch((err) => {
+        setLoadingChat(false);
+        handleError(err);
+      });
     return () => {
       stopSpeaking();
       recordingRef.current?.cancel();
@@ -276,8 +283,11 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
     activeRef.current = id;
     writeActiveId(id);
     setMessages([]);
+    setLoadingChat(true);
     setChatsOpen(false);
-    return loadMessages(id);
+    return loadMessages(id).finally(() => {
+      if (activeRef.current === id) setLoadingChat(false);
+    });
   }
 
   function newChat() {
@@ -290,6 +300,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
     activeRef.current = null;
     writeActiveId(null);
     setMessages([]);
+    setLoadingChat(false);
     setChatsOpen(false);
   }
 
@@ -832,7 +843,9 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
         </header>
 
         <div ref={feedRef} className="min-h-0 flex-1 overflow-y-auto" role="log" aria-label={t("Conversation")} aria-live="polite">
-          {messages.length === 0 && !busy ? (
+          {messages.length === 0 && !busy && loadingChat ? (
+            <ChatSkeleton />
+          ) : messages.length === 0 && !busy ? (
             <EmptyState
               assistantName={assistantName}
               activeId={activeId}

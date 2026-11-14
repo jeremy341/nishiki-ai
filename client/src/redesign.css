@@ -79,10 +79,6 @@ html[data-style="koi"] h2 {
   font-family: var(--font-mono);
   letter-spacing: -0.02em;
 }
-html[data-style="koi"] aside[aria-label] h1,
-html[data-style="koi"] main h1 {
-  text-transform: lowercase;
-}
 
 /* Sections in the sidebar read like the pond's captions: small, tracked, mono. */
 html[data-style="koi"] aside [class*="text-[12px]"] {

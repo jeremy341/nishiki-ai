@@ -733,6 +733,8 @@ app.use("/api", settingsApi);
 app.use("/api", libraryApi);
 app.use("/api", invitesApi);
 app.use("/api", tasksApi);
+// An API path that does not exist answers in JSON, like every other API answer.
+app.use("/api", (req, res) => res.status(404).json({ error: "That does not exist." }));
 
 // ---- static frontend (built by `npm run build`) ----
 

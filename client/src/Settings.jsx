@@ -38,15 +38,17 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
   const wide = useMediaQuery("(min-width: 768px)");
   if (!open) return null;
   const sections = isAdmin ? [...SECTIONS, { value: "admin", label: "Admin", icon: ShieldCheck }] : SECTIONS;
+  // On wide screens the admin pages are entries of their own in the navigation.
+  const allSections = isAdmin ? [...sections, ...ADMIN_ITEMS] : sections;
   const active = page ?? (wide ? "account" : null);
-  const current = sections.find((s) => s.value === active);
+  const current = allSections.find((s) => s.value === active);
   const back = !wide && current ? () => setPage(null) : null;
 
   const groups = [
     { label: t("Account"), items: ["account", "usage"] },
     { label: t("App"), items: ["appearance", "personal", "voice", "apps", "memory", "mail"] },
     { label: t("Data"), items: ["data"] },
-    ...(isAdmin ? [{ label: t("Administration"), items: ["admin"] }] : []),
+    ...(isAdmin ? [{ label: t("Administration"), items: ADMIN_ITEMS.map((i) => i.value) }] : []),
   ];
 
   const nav = (
@@ -55,7 +57,7 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
         <div key={group.label} className="grid gap-0.5">
           <div className="px-2.5 pb-1.5 text-[12px] font-medium text-fg-subtle">{group.label}</div>
           {group.items.map((value) => {
-            const s = sections.find((x) => x.value === value);
+            const s = allSections.find((x) => x.value === value);
             if (!s) return null;
             const selected = active === s.value;
             return (
@@ -64,7 +66,7 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
                 type="button"
                 aria-current={selected ? "page" : undefined}
                 onClick={() => setPage(s.value)}
-                className={`flex h-9 w-full items-center gap-3 rounded-lg px-2.5 text-left text-[14px] transition-colors ${
+                className={`flex h-8 w-full items-center gap-3 rounded-lg px-2.5 text-left text-[14px] transition-colors ${
                   selected ? "bg-fg/10 font-medium text-fg" : "text-fg-muted hover:bg-fg/5 hover:text-fg"
                 }`}
               >
@@ -78,7 +80,7 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
       <button
         type="button"
         onClick={onSignOut}
-        className="flex h-9 w-full items-center gap-3 rounded-lg px-2.5 text-left text-[14px] text-danger transition-colors hover:bg-fg/5"
+        className="flex h-8 w-full items-center gap-3 rounded-lg px-2.5 text-left text-[14px] text-danger transition-colors hover:bg-fg/5"
       >
         <LogOut size={16} aria-hidden="true" className="shrink-0" />
         <span>{t("Sign out")}</span>
@@ -98,6 +100,7 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
       {value === "usage" && <UsageTab />}
       {value === "data" && <DataTab onChatsChanged={onChatsChanged} />}
       {value === "admin" && isAdmin && <AdminTab />}
+      {value?.startsWith("admin:") && isAdmin && <AdminSection section={value.slice(6)} />}
     </>
   );
 
@@ -140,10 +143,15 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
   return (
     <FullPage title={wide || !current ? t("Settings") : t(current.label)} onBack={back} onClose={() => onOpenChange(false)} wide>
       {wide ? (
-        <div className="grid gap-8 md:grid-cols-[14rem_minmax(0,1fr)] md:items-start">
-          <div className="md:sticky md:top-2">{nav}</div>
+        <div className="grid gap-8 md:grid-cols-[16rem_minmax(0,1fr)] md:items-start">
+          <div className="md:sticky md:top-2 md:max-h-[calc(100dvh-5.5rem)] md:overflow-y-auto">{nav}</div>
           <div className="min-w-0">
-            {current && <h2 className="mb-6 text-[22px] font-semibold tracking-tight">{t(current.label)}</h2>}
+            {current && (
+              <div className="mb-6">
+                <h2 className="text-[22px] font-semibold tracking-tight">{t(current.label)}</h2>
+                {current.note && <p className="mt-1 text-[14px] text-fg-muted">{t(current.note)}</p>}
+              </div>
+            )}
             {renderPage(active)}
           </div>
         </div>
@@ -623,7 +631,7 @@ function AppsTab() {
   async function disconnect(app) {
     try {
       await api(`/api/apps/${app.id}/token`, { method: "DELETE" });
-      toast.success(t("{name} disconnected", { name: app.name }));
+      toast.success(t("{name} disconnected", { name: t(app.name) }));
       reload();
     } catch (err) {
       toast.error(err.message);
@@ -656,7 +664,7 @@ function AppsTab() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium">{app.name}</span>
+                        <span className="font-medium">{t(app.name)}</span>
                         {!app.allowed && <Badge>{t("Off for your account")}</Badge>}
                       </div>
                       <div className="mt-0.5 text-sm text-fg-muted">{t(info)}</div>
@@ -666,7 +674,7 @@ function AppsTab() {
                         checked={app.enabled}
                         disabled={!app.allowed || busy === app.id}
                         onCheckedChange={(v) => setEnabled(app, v)}
-                        label={<span className="sr-only">{t("Use {name}", { name: app.name })}</span>}
+                        label={<span className="sr-only">{t("Use {name}", { name: t(app.name) })}</span>}
                       />
                     )}
                     {!toggle && app.category === "google" && (
@@ -728,7 +736,7 @@ function TokenDialog({ app, onClose, onConnected }) {
     <Modal
       open
       onOpenChange={(open) => { if (!open) onClose(); }}
-      title={t("Connect {name}", { name: app.name })}
+      title={t("Connect {name}", { name: t(app.name) })}
       description={t("Paste your personal token. It is checked once with the service, then stored encrypted.")}
     >
       <form className="grid gap-4" onSubmit={save}>
@@ -916,10 +924,10 @@ function MailTab() {
           <Field label={t("Mail address")}>
             <Input type="email" autoComplete="email" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
           </Field>
-          <Field label={t("App password")} hint={s.hasPassword ? "Saved. Leave empty to keep it." : "Not saved yet."}>
+          <Field label={t("App password")} hint={s.hasPassword ? t("Saved. Leave empty to keep it.") : t("Not saved yet.")}>
             <Input type="password" autoComplete="new-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
           </Field>
-          <Field label="Phone notifications topic (ntfy)" hint={s.hasNtfy ? "Saved. Leave empty to keep it." : "A long random name only you know."}>
+          <Field label={t("Phone notifications topic (ntfy)")} hint={s.hasNtfy ? t("Saved. Leave empty to keep it.") : t("A long random name only you know.")}>
             <Input value={form.ntfyTopic} placeholder="long-random-name" onChange={(e) => setForm({ ...form, ntfyTopic: e.target.value })} />
           </Field>
         </div>
@@ -1053,6 +1061,27 @@ const ADMIN_PAGES = [
   { value: "usage", label: "Usage", note: "Messages and tokens across the server", icon: Activity },
 ];
 
+// The admin pages as menu entries. On wide screens they also sit in the settings navigation under "Administration".
+const ADMIN_ITEMS = ADMIN_PAGES.map((page) => ({
+  value: "admin:" + page.value,
+  label: page.value === "usage" ? "Server usage" : page.label,
+  note: page.note,
+  icon: page.icon,
+}));
+
+// The content of one admin page.
+function AdminSection({ section }) {
+  return (
+    <>
+      {section === "users" && <UsersAdmin />}
+      {section === "providers" && <AiAdmin />}
+      {section === "connectors" && <ConnectorsAdmin />}
+      {section === "general" && <GeneralAdmin />}
+      {section === "usage" && <UsageAdmin />}
+    </>
+  );
+}
+
 // Wide screens: the pages sit in a column on the left and the content on the right.
 // Phones: a menu of cards, and each page opens with a way back to the menu.
 function useMediaQuery(query) {
@@ -1111,11 +1140,7 @@ function AdminTab() {
             <h3 className="text-[20px] font-semibold tracking-tight">{t(current.label)}</h3>
             <p className="mt-0.5 text-[14px] text-fg-muted">{t(current.note)}</p>
           </div>
-          {section === "users" && <UsersAdmin />}
-          {section === "providers" && <AiAdmin />}
-          {section === "connectors" && <ConnectorsAdmin />}
-          {section === "general" && <GeneralAdmin />}
-          {section === "usage" && <UsageAdmin />}
+          <AdminSection section={section} />
         </div>
       )}
     </div>
@@ -1202,8 +1227,7 @@ function ConnectorsAdmin() {
   return (
     <div className="grid gap-6">
       <p className="text-sm text-fg-muted">
-        Connectors are MCP servers (Streamable HTTP, https). Their tokens are stored encrypted and never shown again.
-        Users switch them on in their own settings.
+        {t("Connectors are MCP servers (Streamable HTTP, https). Their tokens are stored encrypted and never shown again. Users switch them on in their own settings.")}
       </p>
       {data.connectors.map((c) => (
         <Card key={c.id} className="grid gap-3 p-5">
@@ -1224,7 +1248,7 @@ function ConnectorsAdmin() {
         <h3 className="font-semibold">{t("Add a connector")}</h3>
         <form className="grid gap-4 sm:grid-cols-2" onSubmit={add}>
           <Field label={t("Name")}><Input value={draft.name} maxLength={60} required onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></Field>
-          <Field label={t("Address")} hint="https:// (or http:// for localhost)">
+          <Field label={t("Address")} hint={t("https:// (or http:// for localhost)")}>
             <Input type="url" value={draft.url} required onChange={(e) => setDraft({ ...draft, url: e.target.value })} />
           </Field>
           <Field label={t("Access token")} hint={t("Optional. Stored encrypted.")}>
@@ -1506,6 +1530,7 @@ function AiKeyCard({ keySource, onChanged }) {
     : t("Not set yet");
 
   return (
+    <div className="rounded-[20px] border border-border bg-raised px-5 [&>section]:border-b-0 [&>section]:py-5">
     <Section icon={KeyRound} title={t("Hack Club AI key")} description={t("Stored encrypted on the server. It is never shown again after saving.")}>
       <SettingRow label={t("Status")} description={status} />
       <form className="grid gap-3" onSubmit={save}>
@@ -1518,6 +1543,7 @@ function AiKeyCard({ keySource, onChanged }) {
         </div>
       </form>
     </Section>
+    </div>
   );
 }
 

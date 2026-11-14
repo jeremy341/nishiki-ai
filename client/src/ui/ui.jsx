@@ -134,7 +134,7 @@ export function Sheet({ open, onOpenChange, title, description, children, footer
           className={cx(
             "fixed z-50 flex flex-col bg-overlay text-fg outline-none",
             "inset-x-0 bottom-0 top-[max(env(safe-area-inset-top),12px)] rounded-t-xl border-t border-border",
-            "md:inset-auto md:left-1/2 md:top-1/2 md:h-[min(680px,86vh)] md:w-[min(92vw,720px)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-xl md:border",
+            "md:inset-auto md:left-1/2 md:top-1/2 md:h-auto md:max-h-[min(680px,86vh)] md:w-[min(92vw,720px)] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-xl md:border",
             wide && "md:w-[min(94vw,920px)]",
           )}
         >
