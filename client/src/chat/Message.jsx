@@ -31,9 +31,9 @@ function FileChip({ file, onOpen }) {
     <button
       type="button"
       onClick={() => onOpen?.(file)}
-      className="pressable flex max-w-full items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-left font-mono text-[13px] hover:border-border-strong"
+      className="pressable flex min-h-11 max-w-full items-center gap-2 rounded-md border border-border-strong bg-surface px-3 py-2 text-left font-mono text-[13px] hover:border-fg-subtle"
     >
-      <FileText size={14} aria-hidden="true" className="shrink-0 text-fg-muted" />
+      <FileText size={16} strokeWidth={1.5} aria-hidden="true" className="shrink-0 text-fg-muted" />
       <span className="truncate">{file.name}</span>
     </button>
   );
@@ -55,7 +55,7 @@ function EditQuestion({ value, busy, onSave, onCancel }) {
         rows={3}
         maxLength={4000}
         aria-label={t("Edit message")}
-        className="w-full resize-none rounded-md border border-border bg-surface px-3.5 py-2.5 text-base leading-6 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25 md:text-[15px]"
+        className="w-full resize-none rounded-[18px] border border-border-strong bg-surface px-3.5 py-2.5 text-base leading-6 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
       />
       <div className="flex justify-end gap-2">
         <Button size="sm" variant="ghost" onClick={onCancel} disabled={busy}>{t("Cancel")}</Button>
@@ -74,16 +74,16 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
   if (message.role === "user") {
     return (
       <div className="motion-enter group flex justify-end">
-        <div className="flex max-w-[85%] flex-col items-end gap-2 md:max-w-[70%]">
+        <div className="flex w-full flex-col items-end gap-2">
           {attachments.length > 0 && (
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className="flex max-w-[78%] flex-wrap justify-end gap-2">
               {attachments.map((a) => (isImage(a) ? (
                 <button key={a.id} type="button" onClick={() => onOpenFile?.(a)} className="max-w-full">
                   <img
                     src={a.previewUrl || `/api/attachments/${a.id}`}
                     alt={a.name}
                     loading="lazy"
-                    className="max-h-60 max-w-full rounded-lg border border-border object-cover"
+                    className="max-h-60 max-w-full rounded-[18px] border border-border object-cover"
                   />
                 </button>
               ) : (
@@ -99,14 +99,14 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
               onSave={(content) => { setEditing(false); onEdit?.(message.id, content); }}
             />
           ) : (
-            <div className="flex items-start gap-0.5">
+            <div className="flex w-full items-center justify-end gap-0.5">
               {saved && onEdit && !busy && (
-                <IconButton label={t("Edit message")} onClick={() => setEditing(true)} className="size-11 opacity-100 md:size-9 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:focus-visible:opacity-100">
-                  <Pencil size={14} aria-hidden="true" />
+                <IconButton label={t("Edit message")} onClick={() => setEditing(true)} className="size-11 !text-fg-subtle opacity-100 md:size-9 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:focus-visible:opacity-100">
+                  <Pencil size={18} strokeWidth={1.5} aria-hidden="true" />
                 </IconButton>
               )}
               {message.content && (
-                <div className="whitespace-pre-wrap break-words rounded-lg bg-raised px-3.5 py-2.5 text-[15px] leading-[1.6]">
+                <div className="whitespace-pre-wrap break-words max-w-[78%] rounded-[18px] bg-raised px-3.5 py-2.5 text-base leading-6 [text-wrap:pretty]">
                   {message.content}
                 </div>
               )}
@@ -132,7 +132,7 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
   }
 
   return (
-    <article className="motion-enter group min-w-0 max-w-[68ch] text-[15px] leading-[1.7] md:text-base md:leading-[1.7]" aria-label={t("Assistant")}>
+    <article className="motion-enter group min-w-0 max-w-full text-base leading-[27px]" aria-label={t("Assistant")}>
       {message.activity?.length > 0 && (
         <p className="caption mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           {message.activity.map((label) => (
@@ -142,13 +142,13 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
           ))}
         </p>
       )}
-      {message.content && <Answer text={message.content} />}
+      {message.content && <div className="max-w-[34ch] md:max-w-[68ch]"><Answer text={message.content} /></div>}
       {attachments.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {attachments.map((a) => (isImage(a) ? (
             <button key={a.id} type="button" onClick={() => onOpenFile?.(a)} className="max-w-full">
               <img src={`/api/attachments/${a.id}`} alt={a.name} loading="lazy"
-                className="max-h-60 max-w-full rounded-lg border border-border object-cover" />
+                className="max-h-60 max-w-full rounded-[18px] border border-border object-cover" />
             </button>
           ) : (
             <FileChip key={a.id} file={a} onOpen={onOpenFile} />
@@ -161,7 +161,7 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
         </Suspense>
       )}
       {sources.length > 0 && (
-        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] leading-5 text-fg-subtle">
+        <div className="mt-3 flex max-w-[34ch] flex-wrap items-center gap-x-3 gap-y-1 text-[13px] leading-5 text-fg-subtle md:max-w-[68ch]">
           <span className="caption">{t("Sources")}</span>
           {sources.map((s) => (
             <a
@@ -177,24 +177,24 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
         </div>
       )}
       {(message.content || canRegenerate) && saved && (
-        <div className="-ml-2 mt-1 flex items-center gap-0.5 opacity-100 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
+        <div className="-ml-[13px] mt-0.5 flex items-center opacity-100 transition-opacity duration-150 md:-ml-[9px] md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
           {message.content && (
-            <IconButton label={copied ? t("Copied") : t("Copy answer")} onClick={copy} className="size-11 md:size-9">
-              {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+            <IconButton label={copied ? t("Copied") : t("Copy answer")} onClick={copy} className="size-11 !text-fg-subtle hover:!text-fg md:size-9">
+              {copied ? <Check size={18} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={18} strokeWidth={1.5} aria-hidden="true" />}
             </IconButton>
           )}
           {message.content && onSaveNote && (
-            <IconButton label={t("Save as note")} onClick={() => onSaveNote(message)} className="size-11 md:size-9">
-              <StickyNote size={14} aria-hidden="true" />
+            <IconButton label={t("Save as note")} onClick={() => onSaveNote(message)} className="size-11 !text-fg-subtle hover:!text-fg md:size-9">
+              <StickyNote size={18} strokeWidth={1.5} aria-hidden="true" />
             </IconButton>
           )}
           {canRegenerate && onRegenerate && !busy && (
-            <IconButton label={t("Generate again")} onClick={() => onRegenerate(message.id)} className="size-11 md:size-9">
-              <RotateCw size={14} aria-hidden="true" />
+            <IconButton label={t("Generate again")} onClick={() => onRegenerate(message.id)} className="size-11 !text-fg-subtle hover:!text-fg md:size-9">
+              <RotateCw size={18} strokeWidth={1.5} aria-hidden="true" />
             </IconButton>
           )}
           {timeOf(message.created_at ?? message.createdAt) && (
-            <time className="caption ml-2 tabular-nums">{timeOf(message.created_at ?? message.createdAt)}</time>
+            <time className="caption ml-1 tabular-nums">{timeOf(message.created_at ?? message.createdAt)}</time>
           )}
         </div>
       )}

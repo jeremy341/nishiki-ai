@@ -3,6 +3,8 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { t } from "../i18n/index.js";
 
 // The command palette (Cmd/Ctrl+K): type a few letters to find a chat or an action, then Enter.
+// Nishiki look: a 12px overlay with a hairline, a plain sans search line, 36px mono rows (44px on touch),
+// the current row is `raised` with a 2px vermilion bar on its left edge, groups as lowercase captions.
 // Arrow keys move through the results. The list is built by the page; this only filters and runs it.
 export default function CommandPalette({ open, onOpenChange, commands }) {
   const [query, setQuery] = useState("");
@@ -42,7 +44,7 @@ export default function CommandPalette({ open, onOpenChange, commands }) {
         <DialogPrimitive.Overlay className="motion-overlay fixed inset-0 z-50 bg-scrim" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          className="motion-dialog fixed left-1/2 top-[12vh] z-50 w-[min(92vw,560px)] -translate-x-1/2 overflow-hidden rounded-xl border border-border-strong bg-overlay outline-none"
+          className="motion-dialog fixed left-1/2 top-[12vh] z-50 w-[min(92vw,560px)] -translate-x-1/2 overflow-hidden rounded-xl border border-border-strong bg-overlay text-fg outline-none"
         >
           <DialogPrimitive.Title className="sr-only">{t("Command palette")}</DialogPrimitive.Title>
           <input
@@ -56,7 +58,7 @@ export default function CommandPalette({ open, onOpenChange, commands }) {
             aria-expanded="true"
             aria-controls="command-list"
             aria-activedescendant={items[index] ? `command-${items[index].id}` : undefined}
-            className="h-12 w-full border-b border-border bg-transparent px-4 text-[16px] placeholder:text-fg-subtle focus:outline-none focus-visible:border-accent"
+            className="h-12 w-full border-b border-border bg-transparent px-4 text-[16px] placeholder:text-fg-subtle transition-colors duration-150 focus:outline-none focus-visible:border-accent"
           />
           <ul id="command-list" role="listbox" className="quiet-scroll max-h-[55vh] overflow-y-auto p-2">
             {items.map((c, i) => (
@@ -65,8 +67,8 @@ export default function CommandPalette({ open, onOpenChange, commands }) {
                   type="button"
                   onMouseEnter={() => setIndex(i)}
                   onClick={() => run(c)}
-                  className={`flex min-h-9 w-full items-center gap-3 rounded-md px-3 py-1.5 text-left font-mono text-[13px] font-medium transition-colors pointer-coarse:min-h-11 ${
-                    i === index ? "bg-raised" : ""
+                  className={`relative flex min-h-9 w-full items-center gap-3 rounded-md px-3 py-1.5 text-left font-mono text-[13px] font-medium transition-colors duration-150 pointer-coarse:min-h-11 ${
+                    i === index ? "bg-raised before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-accent" : ""
                   }`}
                 >
                   {c.icon && <c.icon size={17} aria-hidden="true" className="shrink-0 text-fg-muted" />}
@@ -75,7 +77,7 @@ export default function CommandPalette({ open, onOpenChange, commands }) {
                 </button>
               </li>
             ))}
-            {!items.length && <li className="px-3 py-8 text-center font-mono text-[13px] text-fg-muted">{t("Nothing found")}</li>}
+            {!items.length && <li className="px-3 py-6 font-mono text-[13px] text-fg-muted">{t("Nothing found")}</li>}
           </ul>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

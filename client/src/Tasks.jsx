@@ -5,7 +5,7 @@ import { api } from "./api.js";
 import { currentLocale, t } from "./i18n/index.js";
 import KoiEmpty from "./ui/KoiEmpty.jsx";
 import KoiGlyph from "./ui/KoiGlyph.jsx";
-import { Button, Field, FullPage, IconButton, Input, Modal, Select, Sheet, Switch } from "./ui/ui.jsx";
+import { Button, Field, FullPage, IconButton, Input, Modal, Select, Sheet, Switch, Textarea } from "./ui/ui.jsx";
 
 // Scheduled tasks: a question that the assistant answers by itself, once, every day or every week.
 // Each run opens its own chat, and the answer appears there (and as a phone notice, if set up).
@@ -83,8 +83,7 @@ function TaskForm({ task, onClose, onSaved }) {
         <Input value={form.title} maxLength={80} required onChange={(e) => setForm({ ...form, title: e.target.value })} />
       </Field>
       <Field label={t("What should the assistant do?")} hint={t("Written as if you asked it yourself.")}>
-        <textarea
-          className="min-h-24 w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-base md:text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
+        <Textarea
           value={form.prompt}
           maxLength={2000}
           required
@@ -175,16 +174,16 @@ export default function Tasks({ onClose, onOpenChat }) {
 
   return (
     <FullPage title={t("Scheduled tasks")} onClose={onClose}>
-      <div className="grid gap-5">
-        <div className="flex items-center justify-between gap-3">
-          <p className="caption normal-case">{t("The assistant answers these by itself, in their own chat.")}</p>
-          <Button variant="primary" className="shrink-0 whitespace-nowrap max-md:h-11" onClick={() => setEditing({})}><Plus size={16} aria-hidden="true" /> {t("New task")}</Button>
+      <div className="grid gap-8">
+        <div className="flex items-center justify-between gap-4">
+          <p className="caption max-w-[32ch] normal-case">{t("The assistant answers these by itself, in their own chat.")}</p>
+          <Button variant="primary" className="shrink-0 whitespace-nowrap max-md:h-11" onClick={() => setEditing({})}><Plus size={16} strokeWidth={1.5} aria-hidden="true" /> {t("New task")}</Button>
         </div>
 
-        {error && <p role="alert" className="rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
+        {error && <p role="alert" className="field-error">{error}</p>}
 
         {tasks === null && !error && (
-          <div role="status" aria-busy="true" className="flex items-center gap-3 py-10">
+          <div role="status" aria-busy="true" className="flex items-center gap-3 py-12">
             <KoiGlyph swim size={32} />
             <span className="caption">{t("Loading…")}</span>
           </div>
@@ -198,34 +197,34 @@ export default function Tasks({ onClose, onOpenChat }) {
         )}
 
         {tasks?.length > 0 && (
-          <ul className="divide-y divide-border border-y border-border">
+          <ul className="divide-y divide-border">
             {tasks.map((task) => (
-              <li key={task.id} className="grid gap-2 py-3">
-                <div className="flex items-start justify-between gap-3">
+              <li key={task.id} className="grid gap-2.5 py-5 first:pt-1">
+                <div className="flex min-h-11 items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <div className={`truncate text-sm font-medium ${task.enabled ? "" : "text-fg-muted"}`}>{task.title}</div>
+                    <div className={`truncate text-[15px] ${task.enabled ? "" : "text-fg-muted"}`}>{task.title}</div>
                     <div className="caption mt-0.5 tabular-nums">{scheduleText(task)}</div>
                   </div>
                   <Switch checked={task.enabled} onCheckedChange={(v) => toggle(task, v)} label={t("On")} />
                 </div>
-                <p className="line-clamp-2 text-[13px] text-fg-muted">{task.prompt}</p>
+                <p className="line-clamp-2 text-[14px] leading-6 text-fg-muted">{task.prompt}</p>
                 <div className="caption grid gap-0.5 tabular-nums">
                   {task.enabled && task.nextRun && <span className="text-accent">{t("Next: {when}", { when: whenText(task.nextRun) })}</span>}
                   {task.lastRun && <span>{t("Last ran {when}", { when: whenText(task.lastRun) })}</span>}
                   {task.lastError && <span className="normal-case text-danger">{task.lastError}</span>}
                 </div>
-                <div className="-mb-1 flex flex-wrap items-center gap-1">
-                  <Button size="sm" onClick={() => runNow(task)} className="max-md:h-11"><Play size={13} aria-hidden="true" /> {t("Run now")}</Button>
+                <div className="-mb-1.5 flex flex-wrap items-center gap-1">
+                  <Button size="sm" onClick={() => runNow(task)} className="max-md:h-11"><Play size={13} strokeWidth={1.5} aria-hidden="true" /> {t("Run now")}</Button>
                   {task.lastConversationId && (
                     <IconButton label={t("Open the last result")} onClick={() => onOpenChat(task.lastConversationId)} className="size-11 md:size-8">
-                      <MessageSquare size={15} aria-hidden="true" />
+                      <MessageSquare size={16} strokeWidth={1.5} aria-hidden="true" />
                     </IconButton>
                   )}
                   <IconButton label={t("Edit task")} onClick={() => setEditing(task)} className="size-11 md:size-8">
-                    <Pencil size={15} aria-hidden="true" />
+                    <Pencil size={16} strokeWidth={1.5} aria-hidden="true" />
                   </IconButton>
                   <IconButton label={t("Delete task")} onClick={() => setDeleting(task)} className="size-11 md:size-8">
-                    <Trash2 size={15} aria-hidden="true" />
+                    <Trash2 size={16} strokeWidth={1.5} aria-hidden="true" />
                   </IconButton>
                 </div>
               </li>

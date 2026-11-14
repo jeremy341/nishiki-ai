@@ -108,25 +108,25 @@ export default function CalendarPanel({ open, onOpenChange, google, onChanged })
       )}
 
       {connected && (
-        <div className="grid gap-6">
+        <div className="grid gap-10">
           <section className="grid gap-3">
-            <div className="flex items-center justify-between">
+            <div className="flex min-h-11 items-center justify-between">
               <h3 className="caption">{t("Next 7 days")}</h3>
               <Button variant="ghost" size="sm" className="max-md:h-11" onClick={disconnect} disabled={busy}>{t("Disconnect")}</Button>
             </div>
             {events === null && !error && (
-              <div role="status" className="flex items-center gap-3 py-6">
+              <div role="status" className="flex items-center gap-3 py-10">
                 <KoiGlyph swim size={32} />
                 <span className="caption">{t("Loading…")}</span>
               </div>
             )}
             {events && events.length === 0 && <KoiEmpty title={t("Nothing scheduled.")} className="py-8" />}
             {events && events.length > 0 && (
-              <ul className="divide-y divide-border border-y border-border">
+              <ul className="divide-y divide-border">
                 {events.map((ev, i) => (
-                  <li key={ev.id} className="grid min-h-11 content-center gap-0.5 py-2.5">
-                    <span className={`caption tabular-nums ${i === 0 ? "!text-accent" : ""}`}>{formatWhen(ev.start, ev.allDay)}</span>
-                    <span className="min-w-0 whitespace-normal break-words text-sm">{ev.title}</span>
+                  <li key={ev.id} className="grid min-h-14 content-center gap-1 py-3">
+                    <span className={`caption mono-num tabular-nums ${i === 0 ? "!text-accent" : ""}`}>{formatWhen(ev.start, ev.allDay)}</span>
+                    <span className="min-w-0 whitespace-normal break-words text-[15px]">{ev.title}</span>
                   </li>
                 ))}
               </ul>
@@ -145,9 +145,9 @@ export default function CalendarPanel({ open, onOpenChange, google, onChanged })
                 <Button type="submit" className="max-md:h-11" disabled={busy || !text.trim()}>{t("Suggest")}</Button>
               </div>
             </form>
-            {question && <p className="rounded-md border border-border bg-raised px-3 py-2 text-sm">{question}</p>}
+            {question && <p className="rounded-md border border-border-strong bg-surface px-3 py-2 text-[15px]">{question}</p>}
             {proposal && (
-              <div className="grid gap-4 rounded-lg border border-border p-4">
+              <div className="grid gap-4 rounded-lg border border-border-strong bg-surface p-4">
                 <p className="caption normal-case">{t("Check before adding. Nothing is saved yet.")}</p>
                 <Field label={t("Title")}><Input value={proposal.title} maxLength={200} onChange={(e) => setProposal({ ...proposal, title: e.target.value })} /></Field>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -164,7 +164,7 @@ export default function CalendarPanel({ open, onOpenChange, google, onChanged })
         </div>
       )}
 
-      {error && <p role="alert" className="mt-4 rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
+      {error && <p role="alert" className="field-error mt-4">{error}</p>}
     </FullPage>
   );
 }

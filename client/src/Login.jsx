@@ -1,12 +1,17 @@
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "./api.js";
-import OrbView from "./OrbView.jsx";
+import HomeOrb from "./ui/HomeOrb.jsx";
 import KoiBackdrop from "./ui/KoiBackdrop.jsx";
 import { useI18n } from "./i18n/context.jsx";
 import { Button, Field, IconButton, Input } from "./ui/ui.jsx";
 
+// Sign-in: no card. The orb stands in a clearing on the pond, the wordmark and one caption below it, then the two
+// fields and the vermilion button, straight on the water. Fields have a solid surface fill so they read over the koi.
+const HALO = "[text-shadow:0_0_6px_var(--pond),0_0_3px_var(--pond)]";
+
 export default function Login({ assistantName, onSignedIn, onBack }) {
+  const column = useRef(null);
   const { t } = useI18n();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -30,18 +35,25 @@ export default function Login({ assistantName, onSignedIn, onBack }) {
   }
 
   return (
-    <KoiBackdrop>
-    <div className="relative grid min-h-dvh w-full place-items-center px-5 py-10">
+    <KoiBackdrop clearRef={column}>
+    <div className="relative grid min-h-dvh w-full select-text place-items-center px-5 py-10">
       {onBack && (
-        <IconButton label={t("Back")} onClick={onBack} className="absolute left-3 top-3 size-11 !rounded-full bg-raised">
-          <ArrowLeft size={18} aria-hidden="true" />
+        <IconButton
+          label={t("Back")}
+          onClick={onBack}
+          className="absolute left-3 size-11 text-fg"
+          style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}
+        >
+          <ArrowLeft size={20} strokeWidth={1.5} aria-hidden="true" />
         </IconButton>
       )}
-      <div className="grid w-full max-w-sm justify-items-center gap-6 rounded-[22px] border border-border bg-overlay p-6 shadow-sm">
-        <OrbView status="idle" size={104} decorative />
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">{assistantName}</h1>
-          <p className="mt-1 text-fg-muted">{t("login.tagline")}</p>
+      <div ref={column} className="grid w-full max-w-[320px] justify-items-center gap-8">
+        <div className="grid justify-items-center gap-5">
+          <HomeOrb size={120} ring spin />
+          <div className="grid justify-items-center gap-2 text-center">
+            <h1 className={`serif text-[32px] font-normal leading-none tracking-wide text-fg ${HALO}`}>{assistantName}</h1>
+            <p className={`caption !text-fg-muted ${HALO}`}>{t("login.tagline")}</p>
+          </div>
         </div>
 
         <form onSubmit={submit} className="grid w-full gap-4" aria-describedby={error ? "login-error" : undefined}>
@@ -55,6 +67,7 @@ export default function Login({ assistantName, onSignedIn, onBack }) {
               spellCheck={false}
               required
               maxLength={20}
+              className="!h-11"
             />
           </Field>
           <Field label={t("login.password")}>
@@ -66,19 +79,19 @@ export default function Login({ assistantName, onSignedIn, onBack }) {
                 autoComplete="current-password"
                 required
                 maxLength={200}
-                className="pr-12"
+                className="!h-11 pr-12"
               />
-              <span className="absolute inset-y-0 right-1 grid place-items-center">
-                <IconButton label={showPassword ? t("login.hide") : t("login.show")} onClick={() => setShowPassword((v) => !v)} className="size-9">
-                  {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+              <span className="absolute inset-y-0 right-0.5 grid place-items-center">
+                <IconButton label={showPassword ? t("login.hide") : t("login.show")} onClick={() => setShowPassword((v) => !v)} className="size-10">
+                  {showPassword ? <EyeOff size={18} strokeWidth={1.5} aria-hidden="true" /> : <Eye size={18} strokeWidth={1.5} aria-hidden="true" />}
                 </IconButton>
               </span>
             </span>
           </Field>
           {error && (
-            <p id="login-error" role="alert" className="rounded-xl bg-danger-soft px-4 py-2.5 text-sm text-danger">{error}</p>
+            <p id="login-error" role="alert" className="field-error bg-surface">{error}</p>
           )}
-          <Button variant="primary" size="lg" type="submit" disabled={busy} className="w-full">
+          <Button variant="primary" size="lg" type="submit" disabled={busy} className="mt-2 !h-11 w-full">
             {busy ? t("login.busy") : t("login.submit")}
           </Button>
         </form>

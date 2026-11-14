@@ -3,63 +3,14 @@
    except that fg-muted and fg-subtle are one step off so they hold 6:1 and 4.5:1 on every surface, `raised` included.
    Layers go canvas, surface, raised, overlay. fg is 8.5:1 or more on every surface. */
 
+/* Paper (light) is the default; theme.js always sets data-theme="light" or "dark" on <html>. The media block
+   at the end of the tokens only applies when the account follows the system (no data-theme at all). */
+
 html[data-style="koi"],
-html[data-style="koi"][data-theme="dark"] {
-  --canvas: #0e2a32;
-  --surface: #12353f;
-  --raised: #184452;
-  --overlay: #12353f;
-  --border: #224d59;
-  --border-strong: #35707d;
-  --fg: #ebe6dc;
-  --fg-muted: #cdc6b8;
-  --fg-subtle: #b0aa9e;
-  --accent: #e8784f;
-  --accent-fg: #1a0f0a;
-  --danger: #ff8a7a;
-  --danger-soft: rgb(255 138 122 / 0.14);
-  --success: #8fd6a4;
-  --scrim: rgb(6 20 25 / 0.7);
-  --shadow-float: 0 4px 14px rgb(0 0 0 / 0.22);
-  --glass: rgb(235 230 220 / 0.12);
-  --glass-stroke: rgb(235 230 220 / 0.14);
-  --tick: rgb(235 230 220 / 0.32);
-  --radius-card: 8px;
-  --radius-field: 6px;
-  color-scheme: dark;
-}
-
-@media (prefers-color-scheme: light) {
-  html[data-style="koi"]:not([data-theme="dark"]) {
-    --canvas: #e9e4da;
-    --surface: #f3efe6;
-    --raised: #ebe5d8;
-    --overlay: #f3efe6;
-    --border: #d9d1bf;
-    --border-strong: #b9ae97;
-    --fg: #1c1a17;
-    --fg-muted: #564f46;
-    --fg-subtle: #6a6358;
-    --accent: #9e3214;
-    --accent-fg: #f7f2e8;
-    --danger: #a3261a;
-    --danger-soft: rgb(163 38 26 / 0.09);
-    --success: #2f6b3c;
-    --scrim: rgb(40 34 26 / 0.4);
-    --shadow-float: 0 4px 14px rgb(0 0 0 / 0.1);
-    --glass: rgb(60 50 30 / 0.1);
-    --glass-stroke: rgb(60 50 30 / 0.12);
-    --tick: rgb(60 50 30 / 0.22);
-    --radius-card: 8px;
-    --radius-field: 6px;
-    color-scheme: light;
-  }
-}
-
 html[data-style="koi"][data-theme="light"] {
   --canvas: #e9e4da;
   --surface: #f3efe6;
-  --raised: #ebe5d8;
+  --raised: #e0d9c8;
   --overlay: #f3efe6;
   --border: #d9d1bf;
   --border-strong: #b9ae97;
@@ -73,23 +24,76 @@ html[data-style="koi"][data-theme="light"] {
   --success: #2f6b3c;
   --scrim: rgb(40 34 26 / 0.4);
   --shadow-float: 0 4px 14px rgb(0 0 0 / 0.1);
-  --glass: rgb(60 50 30 / 0.1);
-  --glass-stroke: rgb(60 50 30 / 0.12);
   --tick: rgb(60 50 30 / 0.22);
   --radius-card: 8px;
   --radius-field: 6px;
   color-scheme: light;
 }
 
-/* Headings in the pond's mono face; body text stays in the system sans. */
-html[data-style="koi"] h1,
-html[data-style="koi"] h2 {
-  font-family: var(--font-mono);
-  letter-spacing: -0.01em;
+html[data-style="koi"][data-theme="dark"] {
+  --canvas: #0e2a32;
+  --surface: #12343e;
+  --raised: #1a4553;
+  --overlay: #12343e;
+  --border: #2a5663;
+  --border-strong: #41808f;
+  --fg: #ebe6dc;
+  --fg-muted: #cdc6b8;
+  --fg-subtle: #b0aa9e;
+  --accent: #e8784f;
+  --accent-fg: #1a0f0a;
+  --danger: #ff8a7a;
+  --danger-soft: rgb(255 138 122 / 0.14);
+  --success: #8fd6a4;
+  --scrim: rgb(6 20 25 / 0.7);
+  --shadow-float: 0 4px 14px rgb(0 0 0 / 0.22);
+  --tick: rgb(235 230 220 / 0.32);
+  --radius-card: 8px;
+  --radius-field: 6px;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-style="koi"]:not([data-theme]) {
+    --canvas: #0e2a32;
+    --surface: #12343e;
+    --raised: #1a4553;
+    --overlay: #12343e;
+    --border: #2a5663;
+    --border-strong: #41808f;
+    --fg: #ebe6dc;
+    --fg-muted: #cdc6b8;
+    --fg-subtle: #b0aa9e;
+    --accent: #e8784f;
+    --accent-fg: #1a0f0a;
+    --danger: #ff8a7a;
+    --danger-soft: rgb(255 138 122 / 0.14);
+    --success: #8fd6a4;
+    --scrim: rgb(6 20 25 / 0.7);
+    --shadow-float: 0 4px 14px rgb(0 0 0 / 0.22);
+    --tick: rgb(235 230 220 / 0.32);
+    color-scheme: dark;
+  }
+}
+
+/* Never a white or black flash: the page, the root and the app container are always the canvas. */
+html[data-style="koi"],
+html[data-style="koi"] body,
+html[data-style="koi"] #root {
+  background: var(--canvas);
+}
+
+/* Headings and greetings are set in the Mincho-style serif (DESIGN.md, Decisions). In the base layer so a
+   class (.mono-title, font-mono, .serif) still wins; answers (markdown) and the start screen keep their own. */
+@layer base {
+  html[data-style="koi"] :where(h1, h2):not(.mono-title):not(.koi-hero *):not(.prose-answer *) {
+    font-family: "Shippori Mincho", "Noto Serif Display", Georgia, serif;
+    letter-spacing: 0.01em;
+  }
 }
 
 /* Hierarchy comes from size, tracking and colour, never from weight: headings stop at 500.
-   The serif wordmark (.serif, 700) and the start screen's own markup are left alone. */
+   The serif utility (.serif, 500) and the start screen's own markup are left alone. */
 html[data-style="koi"] :is(h1, h2, h3, h4, h5, h6):not(.serif):not(.koi-hero *) {
   font-weight: 500;
 }

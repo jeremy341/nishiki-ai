@@ -1,3 +1,4 @@
+/* ASCII Koi pond engine (MIT, pursurer/ascii-koi, see LICENSE). Changes, see NOTICE.md: the app font, dim() may return several clearings, opts.count. Generated from the original by docs/mockups/make-pond-multi.mjs. */
 /*
  * ASCII Koi: a koi pond drawn in character cells.
  *
@@ -209,7 +210,7 @@
       tintRGB = new Uint32Array(n); tintA = new Float32Array(n);
       touched.length = 0;
     }
-    const count = () => Math.round(room(vw, vh, MOST));
+    const count = () => opts.count || Math.round(room(vw, vh, MOST));
     const headX = f => f.nx * vw, headY = f => f.ny * vh;
 
     function stamp(x, y, rad, amt) {
@@ -762,10 +763,16 @@
       touched.length = 0;
       shade.fill(0);
       /* Koi fade under the title and ease back in around it: a clear space for the clock, and the letters take on their colour. */
-      const box = opts.dim ? opts.dim() : null, pad = cw * 8;
-      const dimAt = box ? (x, y) => {
-        const d = Math.hypot(Math.max(box.left - x, 0, x - box.right), Math.max(box.top - y, 0, y - box.bottom));
-        return 0.1 + 0.9 * sstep(0, pad, d);
+      const raw = opts.dim ? opts.dim() : null, boxes = raw ? [].concat(raw) : [], pad = cw * 8;
+      const dimAt = boxes.length ? (x, y) => {
+        let m = 1;
+        for (const b of boxes) {
+          const d = b.r !== undefined ? Math.max(0, Math.hypot(x - b.cx, y - b.cy) - b.r)
+            : Math.hypot(Math.max(b.left - x, 0, x - b.right), Math.max(b.top - y, 0, y - b.bottom));
+          const lo = b.min === undefined ? 0.1 : b.min;
+          m = Math.min(m, lo + (1 - lo) * sstep(0, b.fade || pad, d));
+        }
+        return m;
       } : () => 1;
       const order = fish.filter(f => f.seen > 0).sort((a, b) => a.depth - b.depth);
       for (const f of order) rasterize(f, dimAt);
@@ -808,9 +815,9 @@
           if (w > 0.03) { ctx.globalAlpha = Math.min(0.5, w * 1.2); ctx.fillText(w > 0.25 ? ":" : "·", x, y); continue; }
           /* the caustic net on open water, as faint strokes that drift and fold */
           const cl = caus(x, y);
-          if (cl > 0.8) { ctx.globalAlpha = (cl - 0.8) * 1.3; ctx.fillText(cl > 0.94 ? "~" : cl > 0.87 ? "-" : "·", x, y); continue; }
+          if (cl > 0.8) { ctx.globalAlpha = (cl - 0.8) * 1.3 * dimAt(x, y) ** 2; ctx.fillText(cl > 0.94 ? "~" : cl > 0.87 ? "-" : "·", x, y); continue; }
           const h = h2(c, r);
-          if (h < spark) { ctx.globalAlpha = 0.1 + 0.12 * (0.5 + 0.5 * Math.sin(t * 0.9 + h * 900)); ctx.fillText("·", x, y); }
+          if (h < spark) { ctx.globalAlpha = (0.1 + 0.12 * (0.5 + 0.5 * Math.sin(t * 0.9 + h * 900))) * dimAt(x, y) ** 2; ctx.fillText("·", x, y); }
         }
       }
       fill = -1;

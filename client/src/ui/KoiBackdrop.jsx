@@ -3,7 +3,8 @@ import { effectiveTheme } from "../theme.js";
 
 // The koi pond behind a whole page, as on the start screen. The page's content sits on top of it.
 // The pond looks the same on every page that uses it, so the look stays when the page changes.
-export default function KoiBackdrop({ children }) {
+// clearRef: a ref to the block the koi keep away from (the sign-in column), so they never swim across the words.
+export default function KoiBackdrop({ children, clearRef }) {
   const wrap = useRef(null);
   const canvas = useRef(null);
 
@@ -22,7 +23,17 @@ export default function KoiBackdrop({ children }) {
       koiLight: cssVar("--koi-light"), koiDark: cssVar("--koi-dark"),
       dark: cssVar("color-scheme").includes("dark"),
     });
-    const pond = createPond({ canvas: canvas.current, palette, reduce, dim: () => null });
+    const pond = createPond({
+      canvas: canvas.current, palette, reduce,
+      dim: () => {
+        const target = clearRef?.current;
+        if (!target) return null;
+        const r = target.getBoundingClientRect();
+        if (!r.width) return null;
+        const pad = 30;
+        return [{ left: r.left - pad, top: r.top - pad, right: r.right + pad, bottom: r.bottom + pad, fade: 46, min: 0.04 }];
+      },
+    });
     pond.size(innerWidth, innerHeight);
     pond.start();
     const onResize = () => pond.size(innerWidth, innerHeight);

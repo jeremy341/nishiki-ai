@@ -248,7 +248,7 @@ export default function VoiceMode({ onClose, turn }) {
       <header className="grid h-12 shrink-0 grid-cols-[3rem_1fr_3rem] items-center px-3">
         <DialogPrimitive.Title className="sr-only">{t("Conversation mode")}</DialogPrimitive.Title>
         <span aria-hidden="true" />
-        <span className="caption text-center tracking-[0.14em]" aria-live="polite">{label && t(label)}</span>
+        <span className="caption text-center" aria-live="polite">{label && t(label)}</span>
         <span aria-hidden="true" />
       </header>
 
@@ -273,7 +273,7 @@ export default function VoiceMode({ onClose, turn }) {
       </KoiStage>
 
       <div className="mx-auto grid min-h-[8rem] w-full max-w-xl content-start gap-2 px-6 text-center">
-        {heard && phase !== "speaking" && <p className="text-[18px] leading-7 text-fg">“{heard}”</p>}
+        {heard && phase !== "speaking" && <p className="text-[18px] leading-7 text-fg [text-wrap:pretty]">“{heard}”</p>}
         {phase === "speaking" && said && <p className="max-h-[22vh] overflow-y-auto text-[15px] leading-7 text-fg-muted">{said}</p>}
         {error && (
           <div role="alert" className="grid justify-items-center gap-2">
@@ -291,9 +291,9 @@ export default function VoiceMode({ onClose, turn }) {
           disabled={busyPhase}
           aria-label={orbLabel}
           aria-pressed={phase === "paused"}
-          className="pressable grid size-14 place-items-center rounded-full bg-raised text-fg hover:bg-border disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
+          className="pressable grid size-14 place-items-center rounded-full border border-border-strong bg-raised text-fg hover:bg-border disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
         >
-          <MicIcon size={22} aria-hidden="true" />
+          <MicIcon size={22} strokeWidth={1.5} aria-hidden="true" />
         </button>
         <button
           type="button"
@@ -301,7 +301,7 @@ export default function VoiceMode({ onClose, turn }) {
           aria-label={t("End conversation")}
           className="pressable grid size-14 place-items-center rounded-full bg-fg text-canvas focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
         >
-          <X size={24} aria-hidden="true" />
+          <X size={24} strokeWidth={1.5} aria-hidden="true" />
         </button>
       </div>
       <button

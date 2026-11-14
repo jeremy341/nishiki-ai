@@ -1,4 +1,4 @@
-// Light/dark. No stored choice means "follow the phone or computer setting" (handled in CSS).
+// Light (paper) and dark (pond). No stored choice means paper. "System" in the settings follows the device again.
 const KEY = "theme";
 
 export function storedTheme() {
@@ -13,6 +13,8 @@ export function storedTheme() {
 export function effectiveTheme() {
   const stored = storedTheme();
   if (stored) return stored;
+  const set = document.documentElement.dataset.theme;
+  if (set === "light" || set === "dark") return set;
   return window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
 
@@ -32,9 +34,9 @@ export function toggleTheme() {
   return next;
 }
 
-// Apply a saved choice as early as possible.
+// Apply a saved choice as early as possible. Without one the app starts on paper (light), also on the start screen.
 const saved = storedTheme();
-if (saved) document.documentElement.dataset.theme = saved;
+document.documentElement.dataset.theme = saved || "light";
 
 // The saved preference from the account: "system" follows the device again.
 export function setThemePreference(value) {
@@ -49,3 +51,6 @@ export function setThemePreference(value) {
   }
   delete document.documentElement.dataset.theme;
 }
+
+// The browser and status-bar colour follows the first theme too.
+document.querySelector('meta[name="theme-color"]')?.setAttribute("content", (saved || "light") === "light" ? "#e9e4da" : "#0e2a32");

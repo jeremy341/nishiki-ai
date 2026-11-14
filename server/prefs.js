@@ -12,10 +12,12 @@ export const DEFAULT_PREFS = {
   memory: true,
   webSearch: true,
   readAloud: false, // replies are only read aloud when the user turns it on
-  theme: "system", // system | light | dark
+  theme: "light", // light (paper) | dark (pond) | system. Paper is the default.
   voice: "marin", // voice for read-aloud replies
   uiLanguage: "de", // language of the interface: de | en
   uiStyle: "koi", // look of the app: koi (the default, the pond look) | classic
+  sounds: true, // a quiet water-drop sound when a message is sent and when a reply arrives
+  haptics: true, // a light tick on send, on the orb and on confirm
   learnFromChats: true, // save durable facts from chats as memories (the user can see and delete them)
 };
 
@@ -99,7 +101,7 @@ export function savePrefs(userId, input) {
       clean[key] = input[key];
     }
   }
-  for (const key of ["memory", "webSearch", "readAloud", "learnFromChats"]) {
+  for (const key of ["memory", "webSearch", "readAloud", "learnFromChats", "sounds", "haptics"]) {
     if (typeof input[key] === "boolean") clean[key] = input[key];
   }
   const prefs = { ...readJson(userId, "prefs"), ...clean };
@@ -135,3 +137,22 @@ export function saveAssistantName(name) {
     .run(JSON.stringify({ assistantName: clean }));
   return clean;
 }
+
+// One time: accounts that never chose a theme (the old default was "follow the device") now start on paper.
+export function migrateThemeToPaper() {
+  const flag = "migrated_theme_paper";
+  if (db.prepare("SELECT value FROM settings WHERE key = ?").get(flag)) return;
+  for (const row of db.prepare("SELECT user_id, prefs FROM user_prefs").all()) {
+    try {
+      const prefs = JSON.parse(row.prefs);
+      if (!prefs.theme || prefs.theme === "system") {
+        prefs.theme = "light";
+        db.prepare("UPDATE user_prefs SET prefs = ? WHERE user_id = ?").run(JSON.stringify(prefs), row.user_id);
+      }
+    } catch {
+      /* a row that cannot be read is left alone */
+    }
+  }
+  db.prepare("INSERT INTO settings (key, value) VALUES (?, '1')").run(flag);
+}
+migrateThemeToPaper();

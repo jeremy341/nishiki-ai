@@ -1,7 +1,9 @@
 @import "tailwindcss";
 @import "@fontsource-variable/geist-mono";
 
-/* The serif of the koi pond title (SIL Open Font Licence, see public/fonts/OFL-NotoSerifDisplay.txt). */
+/* The serif of the koi pond title (SIL Open Font Licence, see public/fonts/OFL-NotoSerifDisplay.txt).
+   Headings use the serif stack below: Shippori Mincho first (the owner adds its @font-face and file later,
+   family name "Shippori Mincho"), this bundled Noto Serif Display until then. */
 @font-face { font-family: "Noto Serif Display"; font-weight: 700; font-display: swap; src: url("/fonts/noto-serif-display-700.woff2") format("woff2"); }
 
 /* Scrollbars that stay out of the way: thin, no arrows, shown while the pointer is over the list. */
@@ -20,66 +22,18 @@
 }
 
 /* ---------- Colour tokens (DESIGN.md, "Two waters") ----------
-   Pond (dark) is the default. Paper (light) follows the phone or computer setting, unless the
-   user picks one (data-theme on <html>). Components only use the token names. redesign.css repeats
-   the same values for the koi look. Text contrast on every surface: fg 8.5:1 or more, fg-muted 6:1,
-   fg-subtle 4.5:1 (the muted and subtle inks are a step off the table so they hold on `raised`). */
+   Paper (light) is the default. Pond (dark) is one tap away. theme.js always puts data-theme="light" or "dark"
+   on <html>; the device-preference block below only matters when the account follows the system (no attribute).
+   Components only use the token names. redesign.css repeats the same values for the koi look.
+   Text contrast on every surface: fg 8.5:1 or more, fg-muted 6:1, fg-subtle 4.5:1 (the muted and subtle
+   inks are a step off the table so they hold on `raised`). color-scheme follows the theme so native
+   controls (selects, date pickers, scrollbars) match. */
 
 :root,
-:root[data-theme="dark"] {
-  --canvas: #0e2a32;
-  --surface: #12353f;
-  --raised: #184452;
-  --overlay: #12353f;
-  --border: #224d59;
-  --border-strong: #35707d;
-  --fg: #ebe6dc;
-  --fg-muted: #cdc6b8;
-  --fg-subtle: #b0aa9e;
-  --accent: #e8784f;
-  --accent-fg: #1a0f0a;
-  --danger: #ff8a7a;
-  --danger-soft: rgb(255 138 122 / 0.14);
-  --success: #8fd6a4;
-  --scrim: rgb(6 20 25 / 0.7);
-  --shadow-float: 0 4px 14px rgb(0 0 0 / 0.22);
-  --ios-blue: #0a84ff;
-  --glass: rgb(235 230 220 / 0.12);
-  --glass-stroke: rgb(235 230 220 / 0.14);
-  --tick: rgb(235 230 220 / 0.32);
-  color-scheme: dark;
-}
-
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --canvas: #e9e4da;
-    --surface: #f3efe6;
-    --raised: #ebe5d8;
-    --overlay: #f3efe6;
-    --border: #d9d1bf;
-    --border-strong: #b9ae97;
-    --fg: #1c1a17;
-    --fg-muted: #564f46;
-    --fg-subtle: #6a6358;
-    --accent: #9e3214;
-    --accent-fg: #f7f2e8;
-    --danger: #a3261a;
-    --danger-soft: rgb(163 38 26 / 0.09);
-    --success: #2f6b3c;
-    --scrim: rgb(40 34 26 / 0.4);
-    --shadow-float: 0 4px 14px rgb(0 0 0 / 0.1);
-    --ios-blue: #007aff;
-    --glass: rgb(60 50 30 / 0.1);
-    --glass-stroke: rgb(60 50 30 / 0.12);
-    --tick: rgb(60 50 30 / 0.22);
-    color-scheme: light;
-  }
-}
-
 :root[data-theme="light"] {
   --canvas: #e9e4da;
   --surface: #f3efe6;
-  --raised: #ebe5d8;
+  --raised: #e0d9c8;
   --overlay: #f3efe6;
   --border: #d9d1bf;
   --border-strong: #b9ae97;
@@ -94,10 +48,55 @@
   --scrim: rgb(40 34 26 / 0.4);
   --shadow-float: 0 4px 14px rgb(0 0 0 / 0.1);
   --ios-blue: #007aff;
-  --glass: rgb(60 50 30 / 0.1);
-  --glass-stroke: rgb(60 50 30 / 0.12);
   --tick: rgb(60 50 30 / 0.22);
   color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --canvas: #0e2a32;
+  --surface: #12343e;
+  --raised: #1a4553;
+  --overlay: #12343e;
+  --border: #2a5663;
+  --border-strong: #41808f;
+  --fg: #ebe6dc;
+  --fg-muted: #cdc6b8;
+  --fg-subtle: #b0aa9e;
+  --accent: #e8784f;
+  --accent-fg: #1a0f0a;
+  --danger: #ff8a7a;
+  --danger-soft: rgb(255 138 122 / 0.14);
+  --success: #8fd6a4;
+  --scrim: rgb(6 20 25 / 0.7);
+  --shadow-float: 0 4px 14px rgb(0 0 0 / 0.22);
+  --ios-blue: #0a84ff;
+  --tick: rgb(235 230 220 / 0.32);
+  color-scheme: dark;
+}
+
+/* "System" in the settings removes data-theme: then the device decides. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --canvas: #0e2a32;
+    --surface: #12343e;
+    --raised: #1a4553;
+    --overlay: #12343e;
+    --border: #2a5663;
+    --border-strong: #41808f;
+    --fg: #ebe6dc;
+    --fg-muted: #cdc6b8;
+    --fg-subtle: #b0aa9e;
+    --accent: #e8784f;
+    --accent-fg: #1a0f0a;
+    --danger: #ff8a7a;
+    --danger-soft: rgb(255 138 122 / 0.14);
+    --success: #8fd6a4;
+    --scrim: rgb(6 20 25 / 0.7);
+    --shadow-float: 0 4px 14px rgb(0 0 0 / 0.22);
+    --ios-blue: #0a84ff;
+    --tick: rgb(235 230 220 / 0.32);
+    color-scheme: dark;
+  }
 }
 
 /* Type scale (named, so a size is a decision and not a number): caption 12, label 13, body 14 or 15,
@@ -141,6 +140,7 @@
 
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-serif: "Shippori Mincho", "Noto Serif Display", Georgia, serif;
 
   --text-caption: 0.75rem;
   --text-caption--line-height: 1rem;
@@ -172,6 +172,7 @@
   body,
   #root {
     height: 100%;
+    background: var(--canvas);
   }
 
   body {
@@ -198,6 +199,13 @@
     scrollbar-width: thin;
     scrollbar-color: var(--border-strong) transparent;
   }
+  *::-webkit-scrollbar { width: 8px; height: 8px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
+  *::-webkit-scrollbar-corner { background: transparent; }
+
+  /* Thin line icons everywhere (DESIGN.md): 1.5px, a utility such as stroke-2 can still override it. */
+  svg.lucide { stroke-width: 1.5; }
 
   button,
   input,
@@ -224,6 +232,7 @@
 
   ::selection {
     background: color-mix(in oklab, var(--accent) 25%, transparent);
+    color: var(--fg);
   }
 }
 
@@ -258,12 +267,12 @@
 .prose-answer th { background: var(--raised); font-weight: 500; }
 .prose-answer hr { border: 0; border-top: 1px solid var(--border); margin: 1em 0; }
 
-/* Code highlighting colours (highlight.js classes), both themes */
-.hljs-keyword, .hljs-selector-tag, .hljs-built_in { color: #c084fc; }
-.hljs-string, .hljs-attr { color: #34d399; }
-.hljs-number, .hljs-literal { color: #fbbf24; }
+/* Code highlighting: the theme's own inks, so it reads in both waters. */
+.hljs-keyword, .hljs-selector-tag, .hljs-built_in { color: var(--accent); }
+.hljs-string, .hljs-attr { color: var(--success); }
+.hljs-number, .hljs-literal { color: var(--fg-muted); }
 .hljs-comment { color: var(--fg-subtle); font-style: italic; }
-.hljs-title, .hljs-function { color: #60a5fa; }
+.hljs-title, .hljs-function { color: var(--fg); font-weight: 500; }
 
 /* Reduce Motion: no sliding, springing or fading for people who turn it on in iOS or macOS. */
 @media (prefers-reduced-motion: reduce) {
@@ -306,7 +315,7 @@
 @keyframes egg-sheet-in { from { transform: translateY(100%); } }
 @keyframes egg-sheet-out { to { transform: translateY(100%); } }
 @keyframes egg-menu-in { from { opacity: 0; transform: scale(0.96); } }
-@keyframes egg-swap-in { from { opacity: 0; transform: translateY(3px); filter: blur(2px); } }
+@keyframes egg-swap-in { from { opacity: 0; transform: translateY(3px); } }
 
 /* A message, a page or a block arriving: a 4px rise and a fade. */
 .motion-enter { animation: egg-enter var(--dur-enter) var(--ease-snappy) backwards; }
@@ -386,8 +395,9 @@
 @layer components {
   /* Page title: Geist Mono 500, 20px, lowercase. */
   .mono-title { font-family: var(--font-mono); font-size: 20px; line-height: 28px; font-weight: 500; letter-spacing: -0.01em; text-transform: lowercase; }
-  /* The wordmark face (Noto Serif Display 700 is the only weight shipped). */
-  .serif { font-family: "Noto Serif Display", Georgia, serif; font-weight: 700; }
+  /* Headings and greetings: Shippori Mincho, falling back to the bundled Noto Serif Display. Keep it at 500
+     (add font-bold only for the wordmark). */
+  .serif { font-family: "Shippori Mincho", "Noto Serif Display", Georgia, serif; font-weight: 500; }
   /* Button, chip, tab and menu item text. */
   .mono-label { font-family: var(--font-mono); font-size: 13px; line-height: 18px; font-weight: 500; }
   /* Times, numbers, ids, addresses. */

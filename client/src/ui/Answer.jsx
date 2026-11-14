@@ -21,10 +21,10 @@ const components = {
   a: ({ node, ...props }) => <a {...props} target="_blank" rel="noopener noreferrer" />,
 };
 
-// Reading text (DESIGN.md): sans, 1.7 line height, headings by size and not by weight, hairlines only.
+// Reading text (DESIGN.md and the chat mockup): sans 16px on a 27px line, headings by size and not by weight, hairlines only.
 export default function Answer({ text }) {
   return (
-    <div className="prose-answer !leading-[1.7] [&_:is(h1,h2,h3)]:!font-medium [&_:is(h1,h2,h3)]:tracking-tight [&_th]:!font-mono [&_th]:!text-xs [&_th]:!font-medium [&_td]:tabular-nums">
+    <div className="prose-answer !text-base !leading-[27px] [text-wrap:pretty] [&_:is(h1,h2,h3)]:!font-medium [&_:is(h1,h2,h3)]:tracking-tight [&_th]:!font-mono [&_th]:!text-xs [&_th]:!font-medium [&_td]:tabular-nums">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeHighlight, { lowlight, detect: false, ignoreMissing: true }]]}

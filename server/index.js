@@ -44,6 +44,7 @@ import {
 } from "./google.js";
 import { serverTtsConfigured, synthesizeSpeech, ttsFormat } from "./tts.js";
 import { liveVoiceAvailable, runVoiceTurn, warmVoice } from "./voice.js";
+import { todayFor } from "./today.js";
 import { burnPasswordTime, verifyPassword } from "./security.js";
 
 purgeExpired();
@@ -273,8 +274,8 @@ app.get("/api/me", (req, res) => {
 });
 
 // The few preferences the app needs at start-up.
-function pickPrefs({ theme, readAloud, voice, uiLanguage, uiStyle }) {
-  return { theme, readAloud, voice, uiLanguage, uiStyle };
+function pickPrefs({ theme, readAloud, voice, uiLanguage, uiStyle, sounds, haptics }) {
+  return { theme, readAloud, voice, uiLanguage, uiStyle, sounds, haptics };
 }
 
 // ---- attachments (photos and PDFs) ----
@@ -632,6 +633,12 @@ app.post("/api/actions/:id/cancel", requireUser, (req, res) => {
 app.get("/api/suggestions", requireUser, async (req, res) => {
   res.set("Cache-Control", "private, no-store");
   res.json({ items: await suggestionsFor(req.user.id) });
+});
+
+// The quiet line on the home screen: the next appointment and the reminders due in the next day.
+app.get("/api/today", requireUser, async (req, res) => {
+  res.set("Cache-Control", "private, no-store");
+  res.json(await todayFor(req.user.id));
 });
 
 app.get("/api/apps", requireUser, (req, res) => {

@@ -13,7 +13,7 @@ import { Button, IconButton, useDialogReturnFocus } from "./ui/ui.jsx";
 // The koi swimming in place and a lowercase word, while a file opens.
 function ViewerLoading() {
   return (
-    <div role="status" aria-live="polite" className="flex items-center gap-3 px-4 py-10">
+    <div role="status" aria-live="polite" className="flex items-center gap-3 px-5 py-12">
       <KoiGlyph swim size={32} />
       <span className="caption">{t("Loading…")}</span>
     </div>
@@ -79,7 +79,7 @@ function PdfPages({ id }) {
   return (
     <div className="px-3 py-4">
       {status === "loading" && <ViewerLoading />}
-      {status === "error" && <p role="alert" className="py-10 text-center font-mono text-[13px] text-danger">{t("The file could not be shown.")}</p>}
+      {status === "error" && <div role="alert"><KoiEmpty title={t("The file could not be shown.")} /></div>}
       <div ref={container} />
     </div>
   );
@@ -138,8 +138,8 @@ function SlideCards({ text }) {
           aria-label={t("Slide {n}", { n: i + 1 })}
           className="grid aspect-video content-start gap-2 overflow-hidden rounded-lg border border-border bg-white p-6 text-neutral-900"
         >
-          <span className="text-[11px] font-medium text-neutral-500">{i + 1}</span>
-          {lines.length > 0 && <p className="text-lg font-semibold leading-snug break-words">{lines[0]}</p>}
+          <span className="font-mono text-[11px] tabular-nums text-neutral-500">{i + 1}</span>
+          {lines.length > 0 && <p className="serif text-lg leading-snug break-words">{lines[0]}</p>}
           {lines.slice(1).map((l, j) => <p key={j} className="text-[14px] leading-6 break-words text-neutral-700">{l}</p>)}
         </section>
       ))}
@@ -162,7 +162,7 @@ function TextFile({ id, kind, name }) {
   }, [id]);
 
   if (state.status === "loading") return <ViewerLoading />;
-  if (state.status === "error") return <p role="alert" className="py-10 text-center font-mono text-[13px] text-danger">{t("The file could not be shown.")}</p>;
+  if (state.status === "error") return <div role="alert"><KoiEmpty title={t("The file could not be shown.")} /></div>;
 
   if (kind === "csv") {
     const rows = parseCsv(state.text);
@@ -170,15 +170,15 @@ function TextFile({ id, kind, name }) {
     const [head = [], ...body] = shown;
     return (
       <div className="p-3">
-        <div className="overflow-auto rounded-lg border border-border bg-surface">
+        <div className="overflow-auto">
           <table className="w-full min-w-max border-collapse text-[13px]">
             <thead className="sticky top-0 z-10">
-              <tr>{head.map((c, i) => <th key={i} className="border-b border-border bg-raised px-3 py-2 text-left font-mono text-[12px] font-medium">{c}</th>)}</tr>
+              <tr>{head.map((c, i) => <th key={i} className="border-b border-border-strong bg-surface px-3 py-2.5 text-left font-mono text-[12px] font-normal text-fg-muted">{c}</th>)}</tr>
             </thead>
             <tbody>
               {body.map((r, i) => (
                 <tr key={i} className="border-t border-border">
-                  {head.map((_, j) => <td key={j} className="px-3 py-1.5 align-top tabular-nums">{r[j] ?? ""}</td>)}
+                  {head.map((_, j) => <td key={j} className="px-3 py-2 align-top font-mono tabular-nums">{r[j] ?? ""}</td>)}
                 </tr>
               ))}
             </tbody>
@@ -318,7 +318,7 @@ export default function FileViewer({ file, onClose, onConverted, onSummarized, w
         <IconButton label={t("Close")} onClick={onClose} className="size-11 md:size-9">
           <X size={18} aria-hidden="true" />
         </IconButton>
-        <DialogPrimitive.Title asChild><span className="min-w-0 flex-1 truncate px-1 font-mono text-[13px]">{file.name}</span></DialogPrimitive.Title>
+        <DialogPrimitive.Title asChild><span className="min-w-0 flex-1 truncate px-1 text-[15px]">{file.name}</span></DialogPrimitive.Title>
         {canSummarise && (
           <Button size="sm" onClick={summarise} disabled={converting} className="max-md:h-11">
             {t("Summarise")}

@@ -1,9 +1,10 @@
 import { useEdgeBack } from "./edgeBack.js";
 import { t } from "../i18n/index.js";
 // Shared building blocks. Radix handles focus and keyboard for dialogs, menus, tabs and
-// switches. They carry the koi theme (DESIGN.md): chrome in Geist Mono 13px, 6px controls (36px, 44px on
-// touch), 8px cards and menus, 12px dialogs, hairlines instead of shadows (one faint one under menus),
-// vermilion only for the primary action and the current choice. Nothing here is rounder than 12px.
+// switches. They carry the Nishiki look (DESIGN.md, mockups in docs/mockups): chrome in Geist Mono 13px, 6px
+// controls (36px, 44px on touch), 8px cards and menus, 12px dialogs and sheets, hairlines instead of shadows (one
+// faint one under menus), titles in the serif at weight 500, thin 1.5px line icons, vermilion only for the
+// primary action and the current choice. Nothing here is rounder than 12px (badges and the switch aside).
 import { useRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as DropdownPrimitive from "@radix-ui/react-dropdown-menu";
@@ -19,9 +20,9 @@ const FOCUS_INSET = "focus-visible:outline-2 focus-visible:-outline-offset-2 foc
 
 // Primary is the one vermilion thing; secondary is a hairline on surface; ghost is text only; danger is danger text with a hairline.
 const BUTTON_VARIANT = {
-  primary: "bg-accent text-accent-fg hover:opacity-90",
-  secondary: "border border-border-strong bg-surface text-fg hover:bg-raised",
-  ghost: "text-fg-muted hover:bg-raised hover:text-fg",
+  primary: "border border-transparent bg-accent text-accent-fg hover:opacity-90",
+  secondary: "border border-border-strong bg-transparent text-fg hover:bg-raised",
+  ghost: "border border-transparent text-fg-muted hover:bg-raised hover:text-fg",
   danger: "border border-danger/40 text-danger hover:bg-danger-soft",
 };
 
@@ -154,7 +155,7 @@ export function Sheet({ open, onOpenChange, title, description, children, footer
         >
           <header className="flex min-h-14 shrink-0 items-center justify-between gap-4 border-b border-border px-5 py-2">
             <div className="min-w-0">
-              <DialogPrimitive.Title className="font-mono text-[15px] font-medium tracking-[-0.01em]">{title}</DialogPrimitive.Title>
+              <DialogPrimitive.Title className="serif text-[19px] leading-7 tracking-[0.01em]">{title}</DialogPrimitive.Title>
               {description && (
                 <DialogPrimitive.Description className="mt-0.5 text-label text-fg-muted">{description}</DialogPrimitive.Description>
               )}
@@ -219,7 +220,7 @@ export function Modal({ open, onOpenChange, title, description, children, footer
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="motion-overlay fixed inset-0 z-40 bg-scrim" />
         <DialogPrimitive.Content className="motion-dialog fixed left-1/2 top-1/2 z-50 max-h-[86dvh] w-[min(92vw,400px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-border-strong bg-overlay p-5 text-fg outline-none">
-          <DialogPrimitive.Title className="font-mono text-[15px] font-medium tracking-[-0.01em]">{title}</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="serif text-[18px] leading-7 tracking-[0.01em]">{title}</DialogPrimitive.Title>
           {description && <DialogPrimitive.Description className="mt-1.5 text-label text-fg-muted">{description}</DialogPrimitive.Description>}
           {children && <div className="mt-4">{children}</div>}
           {footer && <div className="mt-5 flex justify-end gap-2">{footer}</div>}
@@ -284,17 +285,17 @@ export function FullPage({ title, onBack, onClose, children, wide = false }) {
       className="fixed inset-0 z-50 flex flex-col bg-canvas pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] outline-none animate-enter"
     >
       {/* Close (or back) on the left, the title centred, nothing on the right; a hairline under the header. */}
-      <header className="grid h-14 shrink-0 grid-cols-[2.75rem_1fr_2.75rem] items-center border-b border-border px-3">
+      <header className="grid h-14 shrink-0 grid-cols-[2.75rem_1fr_2.75rem] items-center border-b border-border px-2">
         {onBack ? (
-          <IconButton label={t("Back")} onClick={onBack} className="size-11 md:size-9">
+          <IconButton label={t("Back")} onClick={onBack} className="size-11">
             <ArrowLeft size={19} aria-hidden="true" />
           </IconButton>
         ) : (
-          <IconButton label={t("Close")} onClick={onClose} className="size-11 md:size-9">
+          <IconButton label={t("Close")} onClick={onClose} className="size-11">
             <X size={19} aria-hidden="true" />
           </IconButton>
         )}
-        <DialogPrimitive.Title asChild><h2 className="mono-title truncate text-center">{title}</h2></DialogPrimitive.Title>
+        <DialogPrimitive.Title asChild><h2 className="serif truncate text-center text-[19px] leading-7 tracking-[0.01em]">{title}</h2></DialogPrimitive.Title>
         <span aria-hidden="true" />
       </header>
       <div className="quiet-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-10 md:px-6">

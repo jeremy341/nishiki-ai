@@ -34,16 +34,16 @@ export default function Loading({ rows = 3 }) {
 // A chat that is still loading: raised placeholders in the shape of a question and an answer, with the koi swimming.
 export function ChatSkeleton() {
   return (
-    <div role="status" aria-busy="true" className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 md:px-6">
+    <div role="status" aria-busy="true" className="mx-auto flex max-w-3xl flex-col gap-[22px] px-5 py-[18px] md:px-6">
       <span className="sr-only">{t("Loading…")}</span>
-      <div aria-hidden="true" className="ml-auto h-11 w-3/5 max-w-xs animate-pulse rounded-lg bg-raised motion-reduce:animate-none" />
+      <div aria-hidden="true" className="ml-auto h-11 w-3/5 max-w-xs animate-pulse rounded-[18px] bg-raised motion-reduce:animate-none" />
       <div aria-hidden="true" className="grid gap-2.5">
         <div className="h-4 w-4/5 animate-pulse rounded-sm bg-raised motion-reduce:animate-none" />
         <div className="h-4 w-full animate-pulse rounded-sm bg-raised motion-reduce:animate-none" style={{ animationDelay: "120ms" }} />
         <div className="h-4 w-3/5 animate-pulse rounded-sm bg-raised motion-reduce:animate-none" style={{ animationDelay: "240ms" }} />
       </div>
       <KoiLoading className="justify-self-start" />
-      <div aria-hidden="true" className="ml-auto h-11 w-2/5 max-w-xs animate-pulse rounded-lg bg-raised motion-reduce:animate-none" style={{ animationDelay: "360ms" }} />
+      <div aria-hidden="true" className="ml-auto h-11 w-2/5 max-w-xs animate-pulse rounded-[18px] bg-raised motion-reduce:animate-none" style={{ animationDelay: "360ms" }} />
     </div>
   );
 }

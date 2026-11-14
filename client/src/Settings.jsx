@@ -1,6 +1,5 @@
 import StyleSwitch from "./ui/StyleSwitch.jsx";
 import Loading from "./ui/Loading.jsx";
-import PondWindow from "./ui/PondWindow.jsx";
 import WaveRule from "./ui/WaveRule.jsx";
 import KoiEmpty from "./ui/KoiEmpty.jsx";
 import KoiGlyph from "./ui/KoiGlyph.jsx";
@@ -10,6 +9,7 @@ import { toast } from "sonner";
 import { api } from "./api.js";
 import { setThemePreference } from "./theme.js";
 import { getStyle } from "./style.js";
+import { configureFeedback } from "./feedback.js";
 import { useI18n } from "./i18n/context.jsx";
 import { currentLocale, LANGUAGES, t } from "./i18n/index.js";
 import {
@@ -104,9 +104,15 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
     </>
   );
 
-  // Phones: a plain list first (the account, then the pages).
+  // Phones: a plain list first (the account, then the pages in the same groups as the wide navigation).
+  const phoneGroups = [
+    { label: t("Account"), items: ["usage"] },
+    { label: t("App"), items: ["appearance", "personal", "voice", "apps", "memory", "mail"] },
+    { label: t("Data"), items: ["data"] },
+    ...(isAdmin ? [{ label: t("Administration"), items: ["admin"] }] : []),
+  ];
   const phoneMenu = (
-    <div className="grid gap-6">
+    <div className="grid gap-6 pt-2">
       <Group>
         <button
           type="button"
@@ -114,49 +120,60 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
           className="flex min-h-14 w-full items-center gap-3 px-1 py-2 text-left transition-colors active:bg-raised"
         >
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[15px] font-medium">{username}</span>
-            <span className="block text-[13px] text-fg-subtle">{t("Signed in")}</span>
+            <span className="block truncate text-[15px]">{username}</span>
+            <span className="caption block">{t("Signed in")}</span>
           </span>
-          <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-fg-subtle" />
+          <ChevronRight size={16} strokeWidth={1.5} aria-hidden="true" className="shrink-0 text-fg-subtle" />
         </button>
       </Group>
-      <Group>
-        {sections.filter((s) => s.value !== "account").map((s) => (
-          <Row
-            key={s.value}
-            label={t(s.label)}
-            value={s.value === "appearance" ? t(getStyle() === "koi" ? "Koi" : "Classic") : undefined}
-            onClick={() => setPage(s.value)}
-          />
-        ))}
-      </Group>
+      {phoneGroups.map((group, index) => (
+        <div key={group.label} className="grid gap-3">
+          {index > 0 && <WaveRule className="mb-3" />}
+          <div className="caption px-1">{group.label}</div>
+          <Group>
+            {group.items.map((value) => {
+              const s = sections.find((x) => x.value === value);
+              if (!s) return null;
+              return (
+                <Row
+                  key={s.value}
+                  label={t(s.label)}
+                  value={s.value === "appearance" ? t(getStyle() === "koi" ? "Koi" : "Classic") : undefined}
+                  onClick={() => setPage(s.value)}
+                />
+              );
+            })}
+          </Group>
+        </div>
+      ))}
       <Group>
         <Row label={t("Sign out")} destructive onClick={onSignOut} />
       </Group>
-      <PondWindow height={110} />
     </div>
   );
 
   return (
     <FullPage title={wide || !current ? t("Settings") : t(current.label)} onBack={back} onClose={() => onOpenChange(false)} wide>
       {wide ? (
-        <div className="grid gap-10 md:grid-cols-[14rem_minmax(0,1fr)] md:items-start">
-          {/* The list scrolls; the pond window stays at the foot of the column. */}
-          <div className="flex flex-col gap-4 md:sticky md:top-2 md:h-[calc(100dvh-5.5rem)] md:min-h-[26rem]">
-            <div className="quiet-scroll -mr-2 min-h-0 flex-1 overflow-y-auto pr-2">{nav}</div>
-            <PondWindow height={150} className="shrink-0" />
-          </div>
+        <div className="grid gap-12 md:grid-cols-[14rem_minmax(0,1fr)] md:items-start">
+          {/* The navigation scrolls on its own; the page scrolls beside it. */}
+          <div className="quiet-scroll -mr-2 overflow-y-auto pr-2 md:sticky md:top-2 md:max-h-[calc(100dvh-5.5rem)]">{nav}</div>
           <div key={active} className="motion-enter min-w-0 max-w-3xl">
             {current && (
-              <div className="mb-8">
-                <h2 className="font-mono text-[20px] font-medium lowercase tracking-tight">{t(current.label)}</h2>
-                {current.note && <p className="mt-1 text-[13px] text-fg-muted">{t(current.note)}</p>}
+              <div className="mb-10">
+                <h2 className="serif text-[24px] font-normal leading-tight tracking-normal">{t(current.label)}</h2>
+                {current.note && <p className="mt-2 text-[13px] text-fg-muted">{t(current.note)}</p>}
               </div>
             )}
             {renderPage(active)}
           </div>
         </div>
-      ) : (current ? renderPage(current.value) : phoneMenu)}
+      ) : (current ? (
+        <div className="grid gap-6">
+          {current.note && <p className="text-[13px] leading-snug text-fg-muted">{t(current.note)}</p>}
+          {renderPage(current.value)}
+        </div>
+      ) : phoneMenu)}
     </FullPage>
   );
 }
@@ -176,8 +193,8 @@ function Row({ label, value, onClick, destructive = false }) {
       }`}
     >
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      {value && <span className="max-w-[45%] shrink truncate text-[14px] text-fg-subtle">{value}</span>}
-      {!destructive && <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-fg-subtle" />}
+      {value && <span className="caption max-w-[45%] shrink truncate">{value}</span>}
+      {!destructive && <ChevronRight size={16} strokeWidth={1.5} aria-hidden="true" className="shrink-0 text-fg-subtle" />}
     </button>
   );
 }
@@ -449,16 +466,21 @@ function PersonalTab() {
 // ---- Appearance ----
 
 const THEMES = [
-  { value: "system", label: "System" },
   { value: "light", label: "Light" },
   { value: "dark", label: "Dark" },
+  { value: "system", label: "System" },
 ];
 
 function AppearanceTab() {
   const { lang, setLang } = useI18n();
   const { data, error } = useLoad(() => api("/api/settings"));
-  const [theme, setTheme] = useState("system");
-  useEffect(() => { if (data) setTheme(data.prefs.theme); }, [data]);
+  const [theme, setTheme] = useState("light");
+  const [touch, setTouch] = useState({ sounds: true, haptics: true });
+  useEffect(() => {
+    if (!data) return;
+    setTheme(data.prefs.theme);
+    setTouch({ sounds: data.prefs.sounds !== false, haptics: data.prefs.haptics !== false });
+  }, [data]);
   if (error) return <Notice text={error} error />;
   if (!data) return <Loading />;
 
@@ -485,6 +507,20 @@ function AppearanceTab() {
     try {
       await api("/api/settings/prefs", { method: "PUT", body: { theme: value } });
     } catch (err) {
+      toast.error(err.message);
+    }
+  }
+
+  // Sounds and haptics: saved on the account, and switched on or off in this browser at once.
+  async function chooseTouch(key, value) {
+    const before = touch;
+    const next = { ...touch, [key]: value };
+    setTouch(next);
+    try {
+      await api("/api/settings/prefs", { method: "PUT", body: { [key]: value } });
+      configureFeedback(next);
+    } catch (err) {
+      setTouch(before);
       toast.error(err.message);
     }
   }
@@ -517,6 +553,22 @@ function AppearanceTab() {
             </button>
           ))}
         </div>
+      </Section>
+      <Section title={t("Touch")}>
+        <Rows>
+          <ToggleRow
+            label={t("Sounds")}
+            description={t("A quiet water-drop sound when you send and when a reply arrives.")}
+            checked={touch.sounds}
+            onCheckedChange={(v) => chooseTouch("sounds", v)}
+          />
+          <ToggleRow
+            label={t("Haptics")}
+            description={t("A light tick when you send and when you tap the orb.")}
+            checked={touch.haptics}
+            onCheckedChange={(v) => chooseTouch("haptics", v)}
+          />
+        </Rows>
       </Section>
     </div>
   );
@@ -1130,7 +1182,7 @@ function AdminTab() {
             <span className={wide ? "block truncate" : "block text-[15px] text-fg"}>{t(page.label)}</span>
             {!wide && <span className="block text-[13px] leading-snug text-fg-muted">{t(page.note)}</span>}
           </span>
-          {!wide && <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-fg-subtle" />}
+          {!wide && <ChevronRight size={16} strokeWidth={1.5} aria-hidden="true" className="shrink-0 text-fg-subtle" />}
         </button>
       ))}
     </nav>
@@ -1147,8 +1199,8 @@ function AdminTab() {
             </button>
           )}
           <div>
-            <h3 className="font-mono text-[20px] font-medium lowercase tracking-tight">{t(current.label)}</h3>
-            <p className="mt-1 text-[13px] text-fg-muted">{t(current.note)}</p>
+            <h3 className="serif text-[24px] font-normal leading-tight">{t(current.label)}</h3>
+            <p className="mt-2 text-[13px] text-fg-muted">{t(current.note)}</p>
           </div>
           <AdminSection section={section} />
         </div>
@@ -1429,10 +1481,10 @@ function InvitesAdmin({ onChanged }) {
         <span className="font-mono text-[12px] text-fg-muted tabular-nums">{t("{used} of {max} people", { used: data.seats.used, max: data.seats.max })}</span>
       </div>
       {link && (
-        <div className="grid gap-2 rounded-md border border-border p-3">
+        <div className="grid gap-2 rounded-md border border-border bg-surface p-3">
           <span className="text-[13px] text-fg">{t("Send this link. It is shown only now.")}</span>
           <div className="flex gap-2">
-            <Input readOnly value={link.url} onFocus={(e) => e.target.select()} aria-label={t("Invite link")} />
+            <Input readOnly value={link.url} className="font-mono" onFocus={(e) => e.target.select()} aria-label={t("Invite link")} />
             <Button className="shrink-0" onClick={copy}>{t("Copy")}</Button>
           </div>
         </div>
@@ -1441,7 +1493,7 @@ function InvitesAdmin({ onChanged }) {
         <Rows>
           {data.invites.map((invite) => (
             <div key={invite.id} className="flex min-h-11 items-center justify-between gap-3 py-1.5 text-[13px]">
-              <span className="text-fg-muted">{t("Open until {date}", { date: new Date(invite.expiresAt).toLocaleDateString(currentLocale()) })}</span>
+              <span className="font-mono text-[12px] tabular-nums text-fg-muted">{t("Open until {date}", { date: new Date(invite.expiresAt).toLocaleDateString(currentLocale()) })}</span>
               <Button size="sm" variant="ghost" className="max-sm:h-11" onClick={() => revoke(invite)}>{t("Revoke")}</Button>
             </div>
           ))}

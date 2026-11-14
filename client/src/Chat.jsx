@@ -1,23 +1,22 @@
 import { t } from "./i18n/index.js";
 import {
-  AudioLines, ArrowUpRight, Calendar as CalendarIcon, Check, LogOut, Menu as MenuIcon, MoreHorizontal,
-  Download, Pencil, PanelLeft, Plus, Settings as SettingsIcon, Sun, Moon, Trash2, Volume2, X,
+  Calendar as CalendarIcon, LogOut,
+  Download, Pencil, PanelLeft, Plus, Settings as SettingsIcon, SquarePen, Sun, Moon, Trash2, Volume2, X,
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { api, apiStream } from "./api.js";
-import Sidebar from "./chat/Sidebar.jsx";
+import Sidebar, { SidebarBrand } from "./chat/Sidebar.jsx";
 import { MoveDialog, ProjectDialog } from "./chat/ProjectDialog.jsx";
 import Composer from "./chat/Composer.jsx";
 import Message from "./chat/Message.jsx";
 import { kindFor, MAX_BYTES, PICKER_ACCEPT, uploadFile } from "./files.js";
-import KoiPanel from "./ui/KoiPanel.jsx";
+import Home from "./Home.jsx";
+import { configureFeedback, dropSound, haptic } from "./feedback.js";
 import KoiGlyph from "./ui/KoiGlyph.jsx";
-import PondField from "./ui/PondField.jsx";
 import { ChatSkeleton } from "./ui/Loading.jsx";
 import CommandPalette from "./ui/CommandPalette.jsx";
 import { CalendarClock, FileText, Library as LibraryIcon, LayoutGrid, MessageSquare } from "lucide-react";
-import { useStyle } from "./style.js";
 import OrbView from "./OrbView.jsx";
 import { canRecord, startRecording, transcribe } from "./recorder.js";
 import { speak, stopSpeaking, unlockSpeech } from "./speech.js";
@@ -35,14 +34,6 @@ const Library = lazy(() => import("./Library.jsx"));
 const Tasks = lazy(() => import("./Tasks.jsx"));
 
 const MAX_FILES = 4;
-// Used only when the suggestions cannot be loaded.
-const STARTERS = [
-  "Plan my week around a dentist visit on Tuesday",
-  "Make a chart of my workouts this week",
-  "Write a short packing list for a weekend trip",
-  "Remember that I like green tea",
-];
-
 const readPref = (key, fallback) => {
   try {
     const value = window.localStorage.getItem(key);
@@ -158,7 +149,8 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
 
   const recordingRef = useRef(null);
   const feedRef = useRef(null);
-  const pondColumnRef = useRef(null); // the reading column: the koi in the background fade out under it
+  const headerRef = useRef(null); // the header and the pill: the koi on the home screen keep out of them
+  const dockRef = useRef(null);
   // One hidden input per source, like the iOS attach menu: camera, photo library, Files.
   const cameraInputRef = useRef(null);
   const photoInputRef = useRef(null);
@@ -172,6 +164,8 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
   const uploading = files.some((f) => f.status === "uploading");
   const readyFiles = files.filter((f) => f.status === "ready");
   const canSend = !busy && !uploading && Boolean(input.trim() || readyFiles.length);
+  // A new chat with nothing in it is the home screen.
+  const showHome = messages.length === 0 && !busy && !loadingChat;
   const lastAnswerId = [...messages].reverse().find((m) => m.role === "assistant" && typeof m.id === "number")?.id;
 
   useEffect(() => {
@@ -520,6 +514,10 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
     const ids = voice ? [] : readyFiles.map((f) => f.id);
     const sentFiles = voice ? [] : readyFiles;
     if ((!message && !ids.length) || busy || uploading) return null;
+    if (!voice) {
+      dropSound("send");
+      haptic("tap");
+    }
     unlockSpeech();
     stopSpeaking();
     setSpeaking(false);
@@ -579,6 +577,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
       setStreamText("");
       if (activeRef.current === conversationId) {
         setMessages((list) => [...list, streamed ? { ...data.message, key: "streaming" } : data.message]);
+        if (!voice) dropSound("reply");
         const proposed = data.actions || [];
         setActions((list) => [...list.filter((a) => !proposed.some((p) => p.id === a.id)), ...proposed]);
         if (speakReplies && !voice) speakReply(data.message.content);
@@ -611,6 +610,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
       const data = await api(`/api/actions/${action.id}/confirm`, { method: "POST", body: {} });
       setActions((list) => list.filter((a) => a.id !== action.id));
       setMessages((list) => [...list, data.message]);
+      haptic("confirm");
       toast.success(t("Done"));
     } catch (err) {
       if (err.status === 404 || err.status === 409) setActions((list) => list.filter((a) => a.id !== action.id));
@@ -688,6 +688,11 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
   function saveAccountPref(patch) {
     api("/api/settings/prefs", { method: "PUT", body: patch }).catch(() => {});
   }
+
+  // Haptics and the water-drop sound follow the account's switches.
+  useEffect(() => {
+    configureFeedback(session.prefs || {});
+  }, [session.prefs]);
 
   // Apply the saved look and read-aloud choice once the account is loaded.
   useEffect(() => {
@@ -773,8 +778,23 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
 
   const renderSidebar = (drawer) => (
     <Sidebar
-      drawer={drawer}
-      pondHeight={drawer ? (chatsOpen ? 110 : 0) : (sidebarShown ? 140 : 0)}
+      username={user?.username}
+      accountMenu={(
+        <>
+          <div className="px-3 py-2 text-xs text-fg-subtle">{t("Signed in as {name}", { name: user?.username || "" })}</div>
+          <MenuSeparator />
+          <MenuItem icon={theme === "dark" ? Sun : Moon} onSelect={changeTheme}>
+            {theme === "dark" ? t("Light mode") : t("Dark mode")}
+          </MenuItem>
+          <MenuItem icon={Volume2} checked={speakReplies} onSelect={toggleSpeakReplies}>{t("Read replies aloud")}</MenuItem>
+          {features.google && (
+            <MenuItem icon={CalendarIcon} onSelect={() => { setChatsOpen(false); setCalendarOpen(true); }}>{t("Calendar")}</MenuItem>
+          )}
+          <MenuItem icon={SettingsIcon} onSelect={() => { setChatsOpen(false); setSettingsOpen(true); }}>{t("Settings")}</MenuItem>
+          <MenuSeparator />
+          <MenuItem icon={LogOut} destructive onSelect={signOut}>{t("Sign out")}</MenuItem>
+        </>
+      )}
       conversations={conversations}
       projects={projects}
       activeId={activeId}
@@ -794,18 +814,14 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
     />
   );
 
-  const sidebarHeader = (
-    <div className="flex min-w-0 items-center gap-2.5 px-2 pb-3 pt-1">
-      <KoiGlyph size={30} />
-      <span className="truncate text-[20px] leading-7" style={{ fontFamily: '"Noto Serif Display", "Iowan Old Style", Georgia, serif', fontWeight: 700 }}>{assistantName}</span>
-    </div>
-  );
+  // The orb and the name in the serif (DESIGN.md): the sidebar's mark. The account lives in the sidebar footer.
+  const sidebarHeader = <SidebarBrand name={assistantName} />;
 
   return (
     <div className="flex h-dvh w-full overflow-hidden">
       <a href="#chat-main" onClick={() => document.getElementById("chat-main")?.focus()} className="sr-only z-[70] rounded-md bg-accent px-4 py-3 text-sm font-medium text-accent-fg focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:outline-2 focus:outline-offset-2 focus:outline-fg">{t("Skip to chat")}</a>
       {/* Wide screens: the chat list is always visible */}
-      <aside className={`hidden min-w-0 w-72 shrink-0 flex-col overflow-hidden border-r border-border bg-surface p-3 ${!sidebarShown ? "" : viewing ? "xl:flex" : "md:flex"}`} aria-label={t("Chats")}>
+      <aside className={`hidden min-w-0 w-72 shrink-0 flex-col overflow-hidden border-r border-border bg-surface px-3 pb-3 pt-5 ${!sidebarShown ? "" : viewing ? "xl:flex" : "md:flex"}`} aria-label={t("Chats")}>
         {sidebarHeader}
         {renderSidebar(false)}
       </aside>
@@ -817,22 +833,11 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
         {...(chatsOpen ? {} : { inert: "" })}
         className="fixed inset-y-0 left-0 z-0 flex w-[min(86vw,300px)] flex-col border-r border-border bg-surface pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] md:hidden"
       >
-        <div className="flex items-center justify-between gap-2 px-3 pb-2 pt-3">
+        <div className="flex items-center justify-between gap-2 px-3 pt-4">
           {sidebarHeader}
-          <IconButton label={t("Close chats")} onClick={() => setChatsOpen(false)}><X size={20} aria-hidden="true" /></IconButton>
+          <IconButton label={t("Close chats")} onClick={() => setChatsOpen(false)} className="-mt-3"><X size={20} strokeWidth={1.5} aria-hidden="true" /></IconButton>
         </div>
         <div className="flex min-h-0 flex-1 flex-col px-3 pb-3">{renderSidebar(true)}</div>
-        <button
-          type="button"
-          onClick={() => { setChatsOpen(false); setSettingsOpen(true); }}
-          className="mx-3 mb-3 flex min-h-11 items-center gap-3 rounded-md px-2 text-left transition-colors hover:bg-raised"
-        >
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-raised text-xs font-medium uppercase">
-            {(user?.username || "?").slice(0, 1)}
-          </span>
-          <span className="min-w-0 flex-1 truncate text-sm font-medium">{user?.username}</span>
-          <span className="caption">{t("Settings")}</span>
-        </button>
       </aside>
 
       {chatsOpen && (
@@ -848,73 +853,67 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
       <main id="chat-main" tabIndex={-1} className={`relative z-10 flex min-w-0 flex-1 flex-col bg-canvas outline-none transition-[transform,border-radius] duration-300 ease-out md:transform-none md:rounded-none ${
         chatsOpen ? "origin-left translate-x-[min(86vw,300px)] scale-[0.92] overflow-hidden rounded-[22px] shadow-2xl" : ""
       }`}>
-        {/* The koi pond is a quiet watermark behind the conversation (DESIGN.md). The empty chat has its own pond. */}
-        {messages.length > 0 && <PondField column={pondColumnRef} paused={settingsOpen || voiceOpen} opacity={0.24} minWidth={1024} className="-z-10" />}
-        <div ref={pondColumnRef} aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-[min(100%,48rem)] -translate-x-1/2" />
-        <header className="flex h-12 shrink-0 items-center gap-1 border-b border-border px-2 pt-[env(safe-area-inset-top)] md:px-3">
+        {/* A new chat is the home screen: the pond fills the screen behind the header, the orb and the pill. Conversations are quiet: no koi. */}
+        {showHome && (
+          <Home
+            username={user?.username}
+            onTalk={openVoice}
+            onOpenCalendar={features.google ? () => setCalendarOpen(true) : undefined}
+            headerRef={headerRef}
+            dockRef={dockRef}
+            paused={settingsOpen || voiceOpen || chatsOpen}
+          />
+        )}
+        <header
+          ref={headerRef}
+          className={`relative z-10 flex h-[calc(48px+env(safe-area-inset-top))] shrink-0 items-center px-2 pt-[env(safe-area-inset-top)] md:px-3 ${showHome ? "" : "border-b border-border"}`}
+        >
           <IconButton
             label={sidebarShown ? t("Hide sidebar") : t("Show sidebar")}
             onClick={() => setSidebarShown((v) => !v)}
             aria-expanded={sidebarShown}
-            className={viewing ? "size-9 max-xl:hidden" : "size-9 max-md:hidden"}
+            className={`size-11 !text-fg ${viewing ? "max-xl:hidden" : "max-md:hidden"}`}
           >
-            <PanelLeft size={17} aria-hidden="true" />
+            <ToggleIcon />
           </IconButton>
-          <IconButton label={t("Chats")} className="size-11 md:hidden" onClick={() => setChatsOpen(true)}>
-            <MenuIcon size={19} aria-hidden="true" />
+          <IconButton label={t("Chats")} className="size-11 !text-fg md:hidden" onClick={() => setChatsOpen(true)}>
+            <ToggleIcon />
           </IconButton>
-          <div className="flex min-w-0 flex-1 items-center gap-1">
-            {/* The orb is the assistant's presence: it shows idle, thinking and speaking (DESIGN.md). Decorative. */}
-            <span className="mx-1.5 grid shrink-0 place-items-center" aria-hidden="true">
-              <OrbView status={status} size={22} decorative />
-            </span>
-            <h1 className="truncate font-mono text-[13px] font-medium">{active?.title || (activeId ? t("Chat") : t("New chat"))}</h1>
-            {active && (
-              <Menu trigger={
-                <button type="button" aria-label={t("Chat options")} className="pressable grid size-11 shrink-0 place-items-center rounded-md text-fg-muted hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg md:size-9">
-                  <MoreHorizontal size={17} aria-hidden="true" />
-                </button>
-              } align="start">
-                <MenuItem icon={Pencil} onSelect={() => { setRenaming(active); setRenameText(active.title || ""); }}>{t("Rename")}</MenuItem>
-                <MenuItem icon={Download} onSelect={exportChat}>{t("Export as Markdown")}</MenuItem>
-                <MenuItem icon={FileText} onSelect={exportPdf}>{t("Export as PDF")}</MenuItem>
-                <MenuItem icon={Download} onSelect={exportJson}>{t("Export as JSON")}</MenuItem>
-                <MenuItem icon={Trash2} destructive onSelect={() => setDeleting(active)}>{t("Delete")}</MenuItem>
-              </Menu>
-            )}
+          {/* The assistant's state (the small orb) and the chat title in the serif; a tap on them opens the chat options. */}
+          <div className="flex min-w-0 flex-1 items-center pl-1.5">
+            {!showHome && (active ? (
+              <h1 className="m-0 min-w-0">
+                <Menu trigger={
+                  <button type="button" className="pressable flex min-h-11 max-w-full items-center gap-2.5 rounded-md px-1.5 text-left hover:bg-raised focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                    <span className="grid shrink-0 place-items-center" aria-hidden="true"><OrbView status={status} size={20} decorative /></span>
+                    <span className="serif min-w-0 truncate text-[17px] font-medium leading-6 tracking-[0.01em]">{active.title || t("Chat")}</span>
+                    <span className="sr-only">{t("Chat options")}</span>
+                  </button>
+                } align="start">
+                  <MenuItem icon={Pencil} onSelect={() => { setRenaming(active); setRenameText(active.title || ""); }}>{t("Rename")}</MenuItem>
+                  <MenuItem icon={Download} onSelect={exportChat}>{t("Export as Markdown")}</MenuItem>
+                  <MenuItem icon={FileText} onSelect={exportPdf}>{t("Export as PDF")}</MenuItem>
+                  <MenuItem icon={Download} onSelect={exportJson}>{t("Export as JSON")}</MenuItem>
+                  <MenuItem icon={Trash2} destructive onSelect={() => setDeleting(active)}>{t("Delete")}</MenuItem>
+                </Menu>
+              </h1>
+            ) : (
+              <div className="flex min-h-11 min-w-0 items-center gap-2.5 px-1.5">
+                <span className="grid shrink-0 place-items-center" aria-hidden="true"><OrbView status={status} size={20} decorative /></span>
+                <h1 className="serif m-0 min-w-0 truncate text-[17px] font-medium leading-6 tracking-[0.01em]">{activeId ? t("Chat") : t("New chat")}</h1>
+              </div>
+            ))}
           </div>
-          <Menu trigger={
-            <button type="button" aria-label={t("Account: {name}", { name: user?.username || "" })}
-              className="pressable grid size-11 place-items-center rounded-full border border-border bg-raised font-mono text-xs font-medium uppercase hover:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg md:size-9">
-              {(user?.username || "?").slice(0, 1)}
-            </button>
-          }>
-            <div className="px-3 py-2 text-xs text-fg-subtle">{t("Signed in as {name}", { name: user?.username || "" })}</div>
-            <MenuSeparator />
-            <MenuItem icon={theme === "dark" ? Sun : Moon} onSelect={changeTheme}>
-              {theme === "dark" ? t("Light mode") : t("Dark mode")}
-            </MenuItem>
-            <MenuItem icon={Volume2} checked={speakReplies} onSelect={toggleSpeakReplies}>{t("Read replies aloud")}</MenuItem>
-            {features.google && (
-              <MenuItem icon={CalendarIcon} onSelect={() => setCalendarOpen(true)}>{t("Calendar")}</MenuItem>
-            )}
-            <MenuItem icon={SettingsIcon} onSelect={() => setSettingsOpen(true)}>{t("Settings")}</MenuItem>
-            <MenuSeparator />
-            <MenuItem icon={LogOut} destructive onSelect={signOut}>{t("Sign out")}</MenuItem>
-          </Menu>
+          <IconButton label={t("New chat")} onClick={newChat} className="size-11 !text-fg">
+            <SquarePen size={22} strokeWidth={1.5} aria-hidden="true" />
+          </IconButton>
         </header>
 
         <div ref={feedRef} className="min-h-0 flex-1 overflow-y-auto" role="log" aria-label={t("Conversation")} aria-live="polite">
           {messages.length === 0 && !busy && loadingChat ? (
             <ChatSkeleton />
-          ) : messages.length === 0 && !busy ? (
-            <EmptyState
-              assistantName={assistantName}
-              activeId={activeId}
-              onStarter={(text) => { setInput(text); document.querySelector("textarea[aria-label='Message']")?.focus(); }}
-            />
-          ) : (
-            <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 md:px-6">
+          ) : showHome ? null : (
+            <div className="mx-auto flex max-w-3xl flex-col gap-[22px] px-5 pb-6 pt-[18px] md:px-6">
               {(busy && streamText ? [...messages, { id: "streaming", role: "assistant", content: streamText }] : messages).map((m) => (
                 <Message
                   key={m.key ?? m.id}
@@ -929,13 +928,12 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
               ))}
               {busy && !streamText && (
                 <div className="motion-enter flex items-center gap-3" role="status" aria-label={t("Thinking")}>
-                  <KoiGlyph size={34} swim />
+                  <KoiGlyph size={32} swim />
                   <span className="caption">{t("Thinking…")}</span>
                 </div>
               )}
               {actions.length > 0 && (
-                <div className="grid gap-3" aria-label={t("Waiting for your confirmation")}>
-                  <p className="caption" aria-hidden="true">{t("Waiting for your confirmation")}</p>
+                <div className="grid gap-3" role="group" aria-label={t("Waiting for your confirmation")}>
                   {actions.map((a) => (
                     <ActionCard key={a.id} action={a} onConfirm={() => confirmAction(a)} onCancel={() => cancelAction(a)} />
                   ))}
@@ -946,12 +944,12 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
         </div>
 
         {error && (
-          <p role="alert" className="motion-enter mx-auto mb-2 w-[min(92%,48rem)] rounded-lg border border-danger/50 bg-overlay px-3.5 py-2 font-mono text-[13px] leading-5 text-danger">
+          <p role="alert" className="motion-enter relative z-10 mx-5 mb-2 rounded-lg border border-danger/50 bg-overlay px-3.5 py-2 font-mono text-[13px] leading-5 text-danger md:mx-auto md:w-[min(100%-3rem,48rem)]">
             {error}
           </p>
         )}
 
-        <div className="shrink-0 px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-2 md:px-6">
+        <div ref={dockRef} className="relative z-10 shrink-0 px-5 pb-[max(28px,env(safe-area-inset-bottom))] pt-2 md:px-6 md:pb-[max(14px,env(safe-area-inset-bottom))]">
           <Composer
             value={input}
             onChange={setInput}
@@ -1108,66 +1106,37 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
   );
 }
 
-const SOURCE_LABEL = { calendar: "From your calendar", memory: "From your memory", chat: "From your chats" };
+// A small label for what the assistant proposes (the card's caption).
+const KIND_LABEL = {
+  calendar_add: "Calendar event",
+  task_create: "Scheduled task",
+  note_delete: "Delete note",
+  gmail_send: "Send email",
+  todoist_add: "Todoist task",
+  memory_forget: "Forget memory",
+  mcp_call: "App action",
+};
 
-// The home screen suggestions come from what the assistant knows (calendar, memory, chats).
-function EmptyState({ assistantName, activeId, onStarter }) {
-  const style = useStyle();
-  const [items, setItems] = useState(null);
-  useEffect(() => {
-    let alive = true;
-    api("/api/suggestions")
-      .then((data) => { if (alive) setItems(data.items.map((item) => (item.fallback ? { ...item, text: t(item.text) } : item))); })
-      .catch(() => { if (alive) setItems(STARTERS.map((text) => ({ text: t(text), source: "general" }))); });
-    return () => { alive = false; };
-  }, []);
+// The two-line icon of the chat list toggle (the same on phones and desktop).
+function ToggleIcon() {
   return (
-    <div className="mx-auto flex h-full max-w-2xl flex-col items-center justify-center gap-7 px-6 py-10 text-center">
-      {style === "koi"
-        ? <KoiPanel className="h-44 w-full max-w-md" />
-        : <OrbView status="idle" size={112} decorative />}
-      <div className="grid gap-2">
-        <h2 className="text-[26px] leading-[1.2] tracking-tight md:text-[28px]" style={{ fontFamily: '"Noto Serif Display", "Iowan Old Style", Georgia, serif', fontWeight: 700 }}>
-          {activeId ? t("This chat is empty") : t("What can {name} do for you?", { name: assistantName })}
-        </h2>
-        <p className="text-[15px] text-fg-muted">{t("Type, dictate, attach a photo or PDF, or start a conversation.")}</p>
-      </div>
-      <div className="grid w-full gap-2 sm:grid-cols-2" aria-busy={!items}>
-        {items
-          ? items.map((item) => (
-            <button
-              key={item.text}
-              type="button"
-              onClick={() => onStarter(item.text)}
-              className="pressable rounded-lg border border-border bg-surface px-4 py-3 text-left text-sm text-fg-muted hover:border-accent hover:text-fg focus-visible:border-accent focus-visible:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
-            >
-              {SOURCE_LABEL[item.source] && (
-                <span className="caption mb-1 block">
-                  {t(SOURCE_LABEL[item.source])}
-                </span>
-              )}
-              {item.text}
-            </button>
-          ))
-          : Array.from({ length: 4 }, (_, i) => (
-            <div key={i} className="h-[62px] animate-pulse rounded-lg border border-border bg-raised motion-reduce:animate-none" />
-          ))}
-      </div>
-    </div>
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 8h16M4 16h10" />
+    </svg>
   );
 }
 
-// A proposal that changes data (calendar event, note deletion). Runs only on Confirm.
+// A proposal that changes data (calendar event, note deletion). Runs only on Confirm. A hairline card, narrower than the
+// column: a mono caption, the text, a mono details line and the two buttons.
 function ActionCard({ action, onConfirm, onCancel }) {
   return (
-    <div className="motion-enter flex flex-col gap-3 rounded-lg border border-border bg-surface p-3 sm:flex-row sm:items-center">
-      <div className="min-w-0 flex-1">
-        <div className="text-sm">{action.title}</div>
-        {action.details && <div className="mt-0.5 truncate font-mono text-xs tabular-nums text-fg-muted">{action.details}</div>}
-      </div>
-      <div className="flex gap-2">
-        <Button variant="primary" size="sm" className="max-sm:h-11 max-sm:flex-1" onClick={onConfirm}><Check size={14} aria-hidden="true" /> {t("Confirm")}</Button>
-        <Button variant="ghost" size="sm" className="max-sm:h-11 max-sm:flex-1" onClick={onCancel}>{t("Cancel")}</Button>
+    <div className="motion-enter w-full max-w-[326px] rounded-lg border border-border bg-surface px-4 pb-4 pt-3.5 md:max-w-[28rem]">
+      <div className="caption">{t(KIND_LABEL[action.kind] || "Confirmation")}</div>
+      <p className="m-0 mt-1 text-[17px] leading-6">{action.title}</p>
+      {action.details && <p className="m-0 mt-[3px] break-words font-mono text-[13px] leading-5 tracking-[0.02em] text-fg-muted">{action.details}</p>}
+      <div className="mt-3.5 flex gap-2">
+        <Button variant="primary" onClick={onConfirm}>{t("Confirm")}</Button>
+        <Button variant="secondary" onClick={onCancel}>{t("Cancel")}</Button>
       </div>
     </div>
   );

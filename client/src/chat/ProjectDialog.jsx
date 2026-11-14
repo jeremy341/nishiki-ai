@@ -2,11 +2,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { api } from "../api.js";
 import { t } from "../i18n/index.js";
-import { Button, Field, Input, Modal, Select } from "../ui/ui.jsx";
-
-const TEXTAREA = "w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-base md:text-sm "
-  + "placeholder:text-fg-subtle transition-colors hover:border-fg-subtle "
-  + "focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25";
+import { Button, Field, Input, Modal, Select, Textarea } from "../ui/ui.jsx";
 
 // Create or edit a project: a name, and instructions every chat in it follows.
 export function ProjectDialog({ project, onClose, onSaved }) {
@@ -38,13 +34,13 @@ export function ProjectDialog({ project, onClose, onSaved }) {
       title={project ? t("Edit project") : t("New project")}
       description={t("Chats in a project follow its instructions.")}
     >
-      <form className="grid gap-4" onSubmit={save}>
+      <form className="grid gap-5" onSubmit={save}>
         <Field label={t("Project name")}>
           <Input value={name} maxLength={80} required autoFocus onChange={(e) => setName(e.target.value)} />
         </Field>
         <Field label={t("Instructions")} hint={t("For example: always answer in German, I am planning a trip to Spain.")}>
-          <textarea
-            className={`${TEXTAREA} min-h-28 resize-y`}
+          <Textarea
+            className="min-h-28"
             maxLength={4000}
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
@@ -82,7 +78,7 @@ export function MoveDialog({ chat, projects, onClose, onMoved }) {
 
   return (
     <Modal open onOpenChange={(open) => { if (!open) onClose(); }} title={t("Move to project")}>
-      <form className="grid gap-4" onSubmit={save}>
+      <form className="grid gap-5" onSubmit={save}>
         <Field label={t("Project")}>
           <Select value={projectId} onChange={(e) => setProjectId(e.target.value)}>
             <option value="">{t("No project")}</option>

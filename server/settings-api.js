@@ -58,6 +58,8 @@ settingsApi.put("/settings/prefs", requireUser, (req, res) => {
     theme: z.enum(["system", "light", "dark"]).optional(),
     voice: z.enum(VOICES).optional(),
     learnFromChats: z.boolean().optional(),
+    sounds: z.boolean().optional(),
+    haptics: z.boolean().optional(),
     uiLanguage: z.enum(["de", "en"]).optional(),
     uiStyle: z.enum(["classic", "koi"]).optional(),
   }), req.body);
