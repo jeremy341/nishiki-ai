@@ -43,6 +43,7 @@ import {
   listUpcomingEvents, consumeState, startConnect,
 } from "./google.js";
 import { serverTtsConfigured, synthesizeSpeech, ttsFormat } from "./tts.js";
+import { liveVoiceAvailable, runVoiceTurn, warmVoice } from "./voice.js";
 import { burnPasswordTime, verifyPassword } from "./security.js";
 
 purgeExpired();
@@ -262,6 +263,7 @@ app.get("/api/me", (req, res) => {
       exa: exaAvailable(),
       google: googleConfigured(),
       serverTts: serverTtsConfigured(),
+      liveVoice: liveVoiceAvailable(),
       maxAttachmentMb: MAX_ATTACHMENT_BYTES / (1024 * 1024),
     },
     google: user ? googleStatus(user.id) : null,
@@ -271,8 +273,8 @@ app.get("/api/me", (req, res) => {
 });
 
 // The few preferences the app needs at start-up.
-function pickPrefs({ theme, readAloud, voice, uiLanguage, uiStyle, reasoning }) {
-  return { theme, readAloud, voice, uiLanguage, uiStyle, reasoning };
+function pickPrefs({ theme, readAloud, voice, uiLanguage, uiStyle }) {
+  return { theme, readAloud, voice, uiLanguage, uiStyle };
 }
 
 // ---- attachments (photos and PDFs) ----
@@ -664,6 +666,51 @@ app.post("/api/tts", requireUser, voiceLimiter, async (req, res) => {
   res.send(audio);
 });
 
+// Fast voice mode: the recording goes in, speech streams back as server-sent events (see voice.js), and
+// the exchange is saved in the chat. The last event is { type: "done", messages, actions } or an error.
+app.post("/api/voice/turn", requireUser, chatLimiter, async (req, res) => {
+  const { conversationId, audio } = parse(z.object({
+    conversationId: z.number().int().positive().nullable().optional(),
+    audio: z.string().min(100).max(6_500_000),
+  }), req.body);
+  const bytes = Buffer.from(audio, "base64");
+  const isWav = bytes.length > 44 && bytes.subarray(0, 4).toString("ascii") === "RIFF"
+    && bytes.subarray(8, 12).toString("ascii") === "WAVE";
+  if (!isWav) throw new AppError(400, "Audio must be a WAV file.");
+  const userId = req.user.id;
+  let id = conversationId ? ownConversation(userId, conversationId) : null;
+
+  res.set({
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-cache, no-transform",
+    "X-Accel-Buffering": "no",
+  });
+  res.flushHeaders();
+  let open = true;
+  res.on("close", () => { open = false; });
+  const emit = (event) => { if (open) res.write(`data: ${JSON.stringify(event)}\n\n`); };
+  try {
+    if (!id) {
+      const { lastInsertRowid } = db.prepare("INSERT INTO conversations (user_id, project_id) VALUES (?, NULL)").run(userId);
+      id = Number(lastInsertRowid);
+      const row = db.prepare("SELECT id, title, created_at, updated_at, pinned, project_id FROM conversations WHERE id = ?").get(id);
+      emit({ type: "conversation", conversation: conversationRow(row) });
+    }
+    const result = await runVoiceTurn({ userId, conversationId: id, wav: audio, emit });
+    const rows = db.prepare("SELECT id, role, content, created_at, sources, widgets, activity FROM messages WHERE id IN (?, ?) ORDER BY id")
+      .all(result.userMessageId, result.assistantId);
+    const files = attachmentsByMessage(id);
+    emit({ type: "done", messages: rows.map((row) => messageRow(row, files.get(row.id) || [])), actions: pendingByIds(result.actionIds) });
+  } catch (error) {
+    if (error instanceof AppError) emit({ type: "error", error: error.message, status: error.status });
+    else {
+      console.error("Voice turn failed:", error?.name, error?.message);
+      emit({ type: "error", error: "Something went wrong.", status: 500 });
+    }
+  }
+  res.end();
+});
+
 // Speech-to-text. Audio must be WAV; up to about 2 minutes of 16 kHz mono speech.
 app.post("/api/transcribe", requireUser, transcribeLimiter, async (req, res) => {
   const { audio } = parse(z.object({ audio: z.string().min(100).max(6_500_000) }), req.body);
@@ -806,5 +853,6 @@ app.use((error, req, res, next) => {
 
 app.listen(config.port, config.host, () => {
   startScheduler();
+  setTimeout(() => { try { warmVoice(); } catch { /* the filler is optional */ } }, 3000);
   console.log(`${config.assistantName} listening on http://${config.host}:${config.port} (public: ${config.publicUrl})`);
 });

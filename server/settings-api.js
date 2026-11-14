@@ -60,7 +60,6 @@ settingsApi.put("/settings/prefs", requireUser, (req, res) => {
     learnFromChats: z.boolean().optional(),
     uiLanguage: z.enum(["de", "en"]).optional(),
     uiStyle: z.enum(["classic", "koi"]).optional(),
-    reasoning: z.enum(["none", "low", "medium", "high"]).optional(),
   }), req.body);
   res.json({ prefs: savePrefs(req.user.id, input) });
 });

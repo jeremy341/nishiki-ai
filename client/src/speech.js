@@ -102,6 +102,7 @@ function splitForSpeech(text) {
 
 export function stopSpeaking() {
   playRun += 1;
+  currentPcm?.stop();
   if (audioEl) {
     audioEl.pause();
     audioEl.removeAttribute("src");
@@ -145,8 +146,93 @@ function rmsOf(analyser) {
 
 // 0..1 loudness of the reply being played; 0 when no meter is available.
 export function playbackLevel() {
+  if (currentPcm && pcmAnalyser) return rmsOf(pcmAnalyser);
   return playbackAnalyser ? rmsOf(playbackAnalyser) : 0;
 }
 
-export const hasPlaybackMeter = () => Boolean(playbackAnalyser);
+export const hasPlaybackMeter = () => Boolean((currentPcm && pcmAnalyser) || playbackAnalyser);
+
+// ---- Streamed speech (fast voice mode) ----
+// The server sends raw 16-bit mono PCM at 24 kHz in small pieces. Each piece is scheduled right after the
+// previous one, so playback starts with the first piece and carries on without gaps.
+
+let currentPcm = null;
+let pcmAnalyser = null;
+
+export function createPcmPlayer({ onStart, onEnd } = {}) {
+  stopSpeaking();
+  const AC = window.AudioContext || window.webkitAudioContext;
+  meterCtx ||= new AC();
+  const ctx = meterCtx;
+  ctx.resume?.().catch(() => {});
+  const gain = ctx.createGain();
+  const analyser = ctx.createAnalyser();
+  analyser.fftSize = 256;
+  gain.connect(analyser);
+  analyser.connect(ctx.destination);
+  pcmAnalyser = analyser;
+
+  const sources = new Set();
+  let nextTime = 0;
+  let started = false;
+  let ended = false;
+  let stopped = false;
+  let finished = false;
+
+  function check() {
+    if (stopped || finished || !ended || sources.size > 0) return;
+    finished = true;
+    if (currentPcm === player) currentPcm = null;
+    onEnd?.();
+  }
+
+  const player = {
+    get started() { return started; },
+    push(base64) {
+      if (stopped || !base64) return;
+      const bytes = atob(base64);
+      const samples = bytes.length >> 1;
+      if (!samples) return;
+      const buffer = ctx.createBuffer(1, samples, 24000);
+      const channel = buffer.getChannelData(0);
+      for (let i = 0; i < samples; i += 1) {
+        let value = (bytes.charCodeAt(2 * i + 1) << 8) | bytes.charCodeAt(2 * i);
+        if (value & 0x8000) value -= 0x10000;
+        channel[i] = value / 32768;
+      }
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(gain);
+      const now = ctx.currentTime;
+      // A little lead on the first piece, and a little after a gap, so playback never stutters.
+      if (nextTime < now + 0.02) nextTime = now + (started ? 0.04 : 0.12);
+      source.start(nextTime);
+      nextTime += buffer.duration;
+      sources.add(source);
+      source.onended = () => {
+        sources.delete(source);
+        check();
+      };
+      if (!started) {
+        started = true;
+        onStart?.();
+      }
+    },
+    end() {
+      ended = true;
+      check();
+    },
+    stop() {
+      if (stopped) return;
+      stopped = true;
+      for (const source of sources) {
+        try { source.stop(); } catch { /* already finished */ }
+      }
+      sources.clear();
+      if (currentPcm === player) currentPcm = null;
+    },
+  };
+  currentPcm = player;
+  return player;
+}
 

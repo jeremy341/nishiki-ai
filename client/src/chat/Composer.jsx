@@ -2,7 +2,6 @@ import { t } from "../i18n/index.js";
 import { ArrowUp, AudioLines, Camera, Image as ImageIcon, Mic, Paperclip, Plus, Square, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { IconButton, Menu, MenuItem } from "../ui/ui.jsx";
-import Thinking from "./Thinking.jsx";
 
 const MAX_FILES = 4;
 const BARS = 56;
@@ -50,7 +49,6 @@ export default function Composer({
   micState, onMic, onTalk,
   levels, onCancelRecording, onStopRecording, onSendRecording,
   calendarOn, useCalendar, onToggleCalendar,
-  reasoning, onReasoning,
 }) {
   const ref = useRef(null);
   const attachFull = files.length >= MAX_FILES;
@@ -166,7 +164,6 @@ export default function Composer({
             <IconButton label={t("Dictate")} onClick={onMic} className="size-11 md:size-9">
               <Mic size={16} aria-hidden="true" />
             </IconButton>
-            <Thinking value={reasoning} onChange={onReasoning} />
             <div className="ml-auto flex items-center gap-1">
               {!canSend && (
                 <IconButton label={t("Conversation mode")} onClick={onTalk} className="size-11 md:size-9">

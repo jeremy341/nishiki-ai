@@ -148,16 +148,9 @@ export async function listModels() {
       input: m.architecture?.input_modalities || [],
       output: m.architecture?.output_modalities || [],
       context: m.context_length || null,
-      reasoning: Array.isArray(m.supported_parameters) && m.supported_parameters.includes("reasoning"),
     }));
   modelsCache = { at: Date.now(), list };
   return list;
-}
-
-// Whether a model takes the reasoning setting. Unknown models get no setting.
-export async function supportsReasoning(model) {
-  const list = await listModels().catch(() => []);
-  return Boolean(list.find((m) => m.id === model)?.reasoning);
 }
 
 // Saves the admin's choices. The test button checks a model when it is used.

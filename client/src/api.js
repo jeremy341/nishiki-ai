@@ -24,7 +24,7 @@ export async function api(path, { method = "GET", body } = {}) {
 
 // Sends a message and receives the answer while it is written (server-sent events).
 // onDelta(text): a piece of the answer. onReset(): the words so far were only a lead-in. Resolves with the saved answer.
-export async function apiStream(path, body, { onDelta, onReset } = {}) {
+export async function apiStream(path, body, { onDelta, onReset, onEvent } = {}) {
   const response = await fetch(path, {
     method: "POST",
     credentials: "same-origin",
@@ -55,6 +55,7 @@ export async function apiStream(path, body, { onDelta, onReset } = {}) {
       } catch {
         continue;
       }
+      onEvent?.(event);
       if (event.type === "delta") onDelta?.(event.text);
       else if (event.type === "reset") onReset?.();
       else if (event.type === "error") throw new ApiError(event.error || "Something went wrong.", event.status || 500);

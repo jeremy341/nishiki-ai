@@ -16,7 +16,6 @@ export const DEFAULT_PREFS = {
   voice: "alloy", // voice for read-aloud replies
   uiLanguage: "de", // language of the interface: de | en
   uiStyle: "koi", // look of the app: koi (the default, the pond look) | classic
-  reasoning: "low", // how much the chat model thinks before it answers: none | low | medium | high
   learnFromChats: true, // save durable facts from chats as memories (the user can see and delete them)
 };
 
@@ -39,7 +38,6 @@ const ENUMS = {
   theme: ["system", "light", "dark"],
   uiLanguage: ["de", "en"],
   uiStyle: ["classic", "koi"],
-  reasoning: ["none", "low", "medium", "high"],
   voice: VOICES,
 };
 
@@ -94,7 +92,7 @@ export function saveDefaultFeatures(input) {
 export function savePrefs(userId, input) {
   const clean = {};
   if (typeof input.customInstructions === "string") clean.customInstructions = input.customInstructions.slice(0, 1500);
-  for (const key of ["personality", "language", "theme", "voice", "uiLanguage", "uiStyle", "reasoning"]) {
+  for (const key of ["personality", "language", "theme", "voice", "uiLanguage", "uiStyle"]) {
     if (input[key] !== undefined) {
       if (!ENUMS[key].includes(input[key])) throw new AppError(400, `Unknown ${key}.`);
       clean[key] = input[key];

@@ -150,7 +150,6 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-  const [reasoning, setReasoning] = useState(() => (session.prefs?.reasoning && session.prefs.reasoning !== "none" ? session.prefs.reasoning : "low"));
   const [levels, setLevels] = useState([]); // live microphone levels for the recording bar
   const newChatProjectRef = useRef(null); // project for the next chat, when started inside one
   const micIntentRef = useRef("keep"); // what happens when a recording ends: keep, send or cancel // conversation to delete
@@ -693,14 +692,8 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
     setThemePreference(session.prefs.theme);
     setThemeState(effectiveTheme());
     setSpeakReplies(session.prefs.readAloud);
-    setReasoning(session.prefs.reasoning && session.prefs.reasoning !== "none" ? session.prefs.reasoning : "low");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.prefs?.theme, session.prefs?.readAloud, session.prefs?.reasoning]);
-
-  function changeReasoning(level) {
-    setReasoning(level);
-    saveAccountPref({ reasoning: level });
-  }
+  }, [session.prefs?.theme, session.prefs?.readAloud]);
 
   function toggleSpeakReplies() {
     const next = !speakReplies;
@@ -717,6 +710,39 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
     const next = toggleTheme();
     setThemeState(next);
     saveAccountPref({ theme: next });
+  }
+
+  // One turn of fast voice mode. Speech comes back as it is made; the saved messages arrive at the end.
+  async function voiceTurn(wav, { onAudio, onHeard, onReply }) {
+    stopSpeaking();
+    setSpeaking(false);
+    setError("");
+    setBusy(true);
+    try {
+      const done = await apiStream("/api/voice/turn", { conversationId: activeRef.current, audio: wav }, {
+        onEvent: (event) => {
+          if (event.type === "conversation") {
+            const created = event.conversation;
+            setConversations((list) => [created, ...list]);
+            activeRef.current = created.id;
+            setActiveId(created.id);
+            writeActiveId(created.id);
+          } else if (event.type === "audio") onAudio?.(event.data);
+          else if (event.type === "heard") onHeard?.(event.text);
+          else if (event.type === "reply") onReply?.(event.text);
+        },
+      });
+      setMessages((list) => [...list, ...done.messages]);
+      const proposed = done.actions || [];
+      setActions((list) => [...list.filter((a) => !proposed.some((p) => p.id === a.id)), ...proposed]);
+      refreshConversations();
+      return done;
+    } catch (err) {
+      if (err.status === 401) refreshSession();
+      throw err;
+    } finally {
+      setBusy(false);
+    }
   }
 
   function openVoice() {
@@ -929,8 +955,6 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
             onCancelRecording={() => stopDictation("cancel")}
             onStopRecording={() => stopDictation("keep")}
             onSendRecording={() => stopDictation("send")}
-            reasoning={reasoning}
-            onReasoning={changeReasoning}
             onTalk={openVoice}
             calendarOn={calendarOn}
             useCalendar={useCalendar}
@@ -1065,8 +1089,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
       {voiceOpen && (
         <VoiceMode
           onClose={() => setVoiceOpen(false)}
-          ask={(text) => send(text, { voice: true })}
-          speak={(text, callbacks) => speakWith(text, callbacks)}
+          turn={voiceTurn}
         />
       )}
     </div>

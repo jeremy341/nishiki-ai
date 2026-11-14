@@ -4,13 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import OrbView from "./OrbView.jsx";
 import KoiStage from "./ui/KoiStage.jsx";
 import { squares } from "@yogesharc/thinking-orbs/renders";
-import { canRecord, startRecording, transcribe } from "./recorder.js";
-import { hasPlaybackMeter, playbackLevel, stopSpeaking, unlockSpeech } from "./speech.js";
+import { canRecord, startRecording } from "./recorder.js";
+import { createPcmPlayer, hasPlaybackMeter, playbackLevel, stopSpeaking, unlockSpeech } from "./speech.js";
 import { Button, IconButton } from "./ui/ui.jsx";
 
-// Full-screen conversation: listen -> transcribe -> think -> speak -> listen again.
+// Full-screen conversation: listen -> (one call listens and answers, speech streams back) -> listen again.
 // Tap the orb to pause listening, or to stop the reply while it is speaking.
-export default function VoiceMode({ onClose, ask, speak }) {
+// turn(wav, { onAudio, onHeard, onReply }) sends one recording and resolves when the answer is saved.
+export default function VoiceMode({ onClose, turn }) {
   const [phase, setPhase] = useState("starting"); // starting | listening | transcribing | thinking | speaking | paused | error
   const [heard, setHeard] = useState("");
   const [said, setSaid] = useState("");
@@ -23,10 +24,8 @@ export default function VoiceMode({ onClose, ask, speak }) {
   const recorderRef = useRef(null);
   const restartTimer = useRef(null);
   // Callbacks come from the latest render, not from the render that opened this view.
-  const askRef = useRef(ask);
-  const speakRef = useRef(speak);
-  askRef.current = ask;
-  speakRef.current = speak;
+  const turnRef = useRef(turn);
+  turnRef.current = turn;
 
   function setPhaseBoth(next) {
     phaseRef.current = next;
@@ -66,27 +65,8 @@ export default function VoiceMode({ onClose, ask, speak }) {
         restartSoon(); // nobody said anything
         return;
       }
-      understand(wav);
+      converse(wav);
     });
-  }
-
-  async function understand(wav) {
-    setPhaseBoth("transcribing");
-    let text = "";
-    try {
-      text = await transcribe(wav);
-    } catch (err) {
-      if (!openRef.current) return;
-      setError(err.message);
-      restartSoon();
-      return;
-    }
-    if (!openRef.current) return;
-    if (!text) {
-      restartSoon();
-      return;
-    }
-    respond(text);
   }
 
   function restartSoon() {
@@ -97,27 +77,50 @@ export default function VoiceMode({ onClose, ask, speak }) {
     }, 350);
   }
 
-  async function respond(text) {
-    setHeard(text);
+  // One turn. The recording goes up; speech comes back in pieces and is played as it arrives.
+  async function converse(wav) {
+    setHeard("");
     setSaid("");
+    setError("");
     setPhaseBoth("thinking");
-    const reply = await askRef.current(text);
-    if (!openRef.current) return;
-    if (!reply) {
-      restartSoon();
-      return;
-    }
-    setSaid(reply);
-    setPhaseBoth("speaking");
-    speakRef.current(reply, {
-      onStart: () => {},
+    let gotAudio = false;
+    let said = "";
+    const player = createPcmPlayer({
+      onStart: () => {
+        if (openRef.current && phaseRef.current === "thinking") setPhaseBoth("speaking");
+      },
       onEnd: () => {
         if (openRef.current && phaseRef.current === "speaking") listen();
       },
-      onError: () => {
-        if (openRef.current && phaseRef.current === "speaking") listen();
-      },
     });
+    try {
+      await turnRef.current(wav, {
+        onAudio: (data) => {
+          gotAudio = true;
+          player.push(data);
+        },
+        onHeard: (text) => setHeard(text),
+        onReply: (text) => {
+          said += text;
+          setSaid(said);
+        },
+      });
+      if (!openRef.current) {
+        player.stop();
+        return;
+      }
+      player.end(); // plays what is left, then the listening starts again
+      if (!gotAudio) restartSoon(); // there was nothing to say out loud
+    } catch (err) {
+      player.stop();
+      if (!openRef.current) return;
+      if (err.status === 400) {
+        restartSoon(); // nothing was understood
+        return;
+      }
+      setError(err.message);
+      setPhaseBoth("error");
+    }
   }
 
   function stopAll() {

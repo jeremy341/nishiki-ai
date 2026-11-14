@@ -1,8 +1,7 @@
 import { config } from "./config.js";
 import { db } from "./db.js";
 import { AppError } from "./errors.js";
-import { getPrefs } from "./prefs.js";
-import { resolveRole, roleConfigured, supportsReasoning } from "./providers.js";
+import { resolveRole, roleConfigured } from "./providers.js";
 
 export function aiConfigured() {
   return roleConfigured("chat");
@@ -51,9 +50,6 @@ async function post(url, apiKey, body, timeoutMs) {
   return response.json().catch(() => null);
 }
 
-// Extra output room for the thinking setting, because thinking tokens count toward max_tokens.
-const REASONING_HEADROOM = { none: 0, low: 1000, medium: 3000, high: 6000 };
-
 // One model call for a job ("chat", "stt", "tts"). Returns the assistant message, which may
 // contain tool_calls instead of text. Token counts are recorded against the user.
 export async function callModel(messages, {
@@ -63,7 +59,6 @@ export async function callModel(messages, {
   temperature = 0.6,
   tools,
   budget, // { used } for one reply: tokens used so far, across its tool steps
-  effort: effortOverride, // "low" | "medium" | "high", instead of the user's setting
   onText, // called with each piece of answer text as it arrives (switches to streaming)
 } = {}) {
   const r = resolveRole(role);
@@ -71,14 +66,6 @@ export async function callModel(messages, {
   if (tools?.length) {
     body.tools = tools;
     body.tool_choice = "auto";
-  }
-  // The user's thinking setting, for models that offer it (chat answers only).
-  if ((role === "chat" || role === "voice") && userId && await supportsReasoning(r.model)) {
-    // There is no "off": the lowest level is "low".
-    const chosen = effortOverride || getPrefs(userId).reasoning;
-    const effort = chosen === "none" ? "low" : chosen;
-    body.reasoning = { effort };
-    body.max_tokens = maxTokens + (REASONING_HEADROOM[effort] ?? 0);
   }
   if (onText) {
     try {

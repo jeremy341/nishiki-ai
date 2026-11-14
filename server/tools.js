@@ -427,8 +427,9 @@ function allowedSpec(spec, ctx) {
 
 // Tool definitions cost tokens on every request (about 3,200 for all of them). So only the tools that
 // the recent messages could need are sent. A tool whose words never come up is simply not offered.
-const ALWAYS = new Set(["get_time", "web_search"]);
+const ALWAYS = new Set(["web_search"]);
 const ROUTES = [
+  [["get_time"], /uhrzeit|wie sp(ä|ae)t|what time|datum|\bdate\b|zeitzone|time zone/i],
   [["read_web_page"], /https?:|www\.|\.(com|de|org|net|io)\b|webseite|website|seite|link|artikel|article|page/i],
   [["calendar_upcoming", "calendar_add"], /kalender|termin|calendar|event|meeting|besprechung|verabred|appointment|woche|week|morgen|tomorrow|heute|today|frei|free/i],
   [["create_pdf"], /pdf|dokument|document|bericht|report|zusammenfassung als/i],

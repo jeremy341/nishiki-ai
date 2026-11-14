@@ -335,11 +335,6 @@ const PERSONALITY = [
   { value: "concise", label: "Concise" },
   { value: "detailed", label: "Detailed" },
 ];
-const REASONING = [
-  { value: "low", label: "Low" },
-  { value: "medium", label: "Normal" },
-  { value: "high", label: "High" },
-];
 const LANGUAGE = [
   { value: "auto", label: "Match my message" },
   { value: "de", label: "German" },
@@ -413,11 +408,6 @@ function PersonalTab() {
           <SettingRow label={t("Reply language")}>
             <Select aria-label={t("Reply language")} className="w-full sm:w-48" value={form.language} onChange={(e) => savePrefs({ language: e.target.value })}>
               {LANGUAGE.map((l) => <option key={l.value} value={l.value}>{t(l.label)}</option>)}
-            </Select>
-          </SettingRow>
-          <SettingRow label={t("Thinking")} description={t("More thinking gives better answers to hard questions, but takes longer and costs more.")}>
-            <Select aria-label={t("Thinking")} className="w-full sm:w-48" value={form.reasoning && form.reasoning !== "none" ? form.reasoning : "low"} onChange={(e) => savePrefs({ reasoning: e.target.value })}>
-              {REASONING.map((r) => <option key={r.value} value={r.value}>{t(r.label)}</option>)}
             </Select>
           </SettingRow>
         </Rows>

@@ -19,7 +19,7 @@ export async function runAgent(messages, ctx) {
     }
     const message = await callModel(working, { role: ctx.voice && roleConfigured("voice") ? "voice" : "chat", userId: ctx.userId, tools: tools.length ? tools : undefined, budget,
       onText: ctx.onText,
-      ...(ctx.voice ? { effort: "low", maxTokens: 450 } : {}) });
+      ...(ctx.voice ? { maxTokens: 450 } : {}) });
     const calls = message.tool_calls || [];
 
     if (!calls.length) {

@@ -101,17 +101,22 @@ async function attempt(text, voice, prompt) {
   return { pcm: Buffer.from(audioChunks.join(""), "base64"), transcript, usage, model: r.model };
 }
 
-export async function synthesizeSpeech(text, voice, userId = null) {
+// Raw PCM16 (24 kHz, mono) of the text, said as written.
+export async function synthesizePcm(text, voice, userId = null) {
   if (!serverTtsConfigured()) throw new AppError(404, "Server-side voice is not configured.");
   for (const prompt of PROMPTS) {
     const { pcm, transcript, usage, model } = await attempt(text, voice, prompt);
     // Spoken audio is the biggest single cost of a chat, so it is counted like everything else.
     recordUsage(userId, "tts", "hackclub", model, usage);
     // No transcript from the provider: nothing to check against, so trust the audio.
-    if (!transcript || sameWords(transcript, text)) return wavFromPcm16(pcm);
+    if (!transcript || sameWords(transcript, text)) return pcm;
     console.warn("TTS said something other than the text; trying again");
   }
   throw new AppError(502, "The voice service did not read the text as written.");
+}
+
+export async function synthesizeSpeech(text, voice, userId = null) {
+  return wavFromPcm16(await synthesizePcm(text, voice, userId));
 }
 
 // Raw 16-bit mono PCM at 24 kHz (what the audio models stream) in a WAV file that every browser plays.
