@@ -425,10 +425,45 @@ function allowedSpec(spec, ctx) {
   return true;
 }
 
+// Tool definitions cost tokens on every request (about 3,200 for all of them). So only the tools that
+// the recent messages could need are sent. A tool whose words never come up is simply not offered.
+const ALWAYS = new Set(["get_time", "web_search"]);
+const ROUTES = [
+  [["read_web_page"], /https?:|www\.|\.(com|de|org|net|io)\b|webseite|website|seite|link|artikel|article|page/i],
+  [["calendar_upcoming", "calendar_add"], /kalender|termin|calendar|event|meeting|besprechung|verabred|appointment|woche|week|morgen|tomorrow|heute|today|frei|free/i],
+  [["create_pdf"], /pdf|dokument|document|bericht|report|zusammenfassung als/i],
+  [["create_presentation"], /pr(ä|ae)sentation|presentation|folien|slides?|powerpoint|pptx|deck/i],
+  [["save_note", "list_notes", "delete_note"], /notiz|notes?\b|aufschreib|schreib.{0,20}auf|festhalten/i],
+  [["remember", "forget"], /merk|erinner|remember|vergiss|forget|speicher|memory|ged(ä|ae)chtnis|ab jetzt|from now on/i],
+  [["search_past_chats"], /letzte|damals|fr(ü|ue)her|vorher|besprochen|gesagt|chat|past|earlier|previous|last time|erinnerst|talked|haben wir|hatten wir|schon mal/i],
+  [["mail_recent"], /mail|post\b|inbox|posteingang|nachricht|message/i],
+  [["gmail_search", "gmail_send"], /gmail|mail|nachricht|message|schreib/i],
+  [["show_widget"], /diagramm|chart|graph|tabelle|table|vergleich|compare|statistik|stats|karten|cards|(ü|ue)bersicht|liste|list|visual|plot|zahlen|numbers|widget|zeig|show|kurve|balken|torte|pie|trend|verlauf/i],
+  [["weather_forecast"], /wetter|weather|regen|rain|temperatur|temperature|forecast|vorhersage|sonne|sun|schnee|snow|wind|grad\b|warm|kalt|cold/i],
+  [["convert_currency"], /w(ä|ae)hrung|currency|euro|dollar|usd|eur|chf|gbp|yen|jpy|umrechn|convert|wechselkurs|exchange rate|kurs|[$€£]/i],
+  [["wikipedia_summary"], /wiki|wer (war|ist)|who (is|was)|was ist|what is|biograph|erkl(ä|ae)r|explain|bedeutet|meaning/i],
+  [["find_place", "route_distance"], /karte|map|route|weg\b|entfern|distance|wo ist|where|restaurant|caf(é|e)|nearby|n(ä|ae)he|adresse|address|fahr|drive|km\b|ort\b|place|bahn|bus|zug|train|laufen|walk/i],
+  [["drive_search"], /drive|datei|files?\b|dokument|document|ordner|folder/i],
+  [["todoist_tasks", "todoist_add_task"], /todoist|aufgabe|task|to-?do|erledigen/i],
+  [["github_inbox"], /github|issue|pull request|\bpr\b|repo|commit/i],
+  [["notion_search"], /notion/i],
+  [["schedule_task", "set_reminder"], /erinner|remind|reminder|t(ä|ae)glich|daily|jeden|jede\b|every|w(ö|oe)chentlich|weekly|\bum \d|\bat \d|timer|wecker|alarm|plan|schedule|sp(ä|ae)ter|later|in \d+ (min|stund|hour|tag|day)/i],
+];
+
+export function routedNames(text) {
+  const names = new Set(ALWAYS);
+  for (const [list, pattern] of ROUTES) {
+    if (pattern.test(text)) for (const name of list) names.add(name);
+  }
+  return names;
+}
+
 // Everything the model may call: built-in tools plus the connectors the user switched on.
+// ctx.routeText: the latest messages. Without it every allowed tool is offered.
 export function toolSpecs(ctx) {
+  const routed = typeof ctx.routeText === "string" ? routedNames(ctx.routeText) : null;
   const builtIn = SPECS
-    .filter((spec) => allowedSpec(spec, ctx))
+    .filter((spec) => allowedSpec(spec, ctx) && (!routed || routed.has(spec.name)))
     .map((spec) => ({
       type: "function",
       function: { name: spec.name, description: spec.description, parameters: spec.parameters },

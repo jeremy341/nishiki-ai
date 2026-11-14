@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { api } from "./api.js";
+import { api, apiStream } from "./api.js";
 import Sidebar from "./chat/Sidebar.jsx";
 import { MoveDialog, ProjectDialog } from "./chat/ProjectDialog.jsx";
 import Composer from "./chat/Composer.jsx";
@@ -98,6 +98,9 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
   const [input, setInput] = useState("");
   const [files, setFiles] = useState([]); // { localId, id, kind, name, mime, previewUrl, status, error }
   const [busy, setBusy] = useState(false);
+  // The answer while it is being written. Empty when nothing is streaming.
+  const [streamText, setStreamText] = useState("");
+  const streamRef = useRef({ text: "", frame: 0 });
   const [error, setError] = useState("");
   const [micState, setMicState] = useState("idle"); // idle | recording | transcribing
   const [speaking, setSpeaking] = useState(false);
@@ -147,7 +150,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-  const [reasoning, setReasoning] = useState(() => session.prefs?.reasoning || "low");
+  const [reasoning, setReasoning] = useState(() => (session.prefs?.reasoning && session.prefs.reasoning !== "none" ? session.prefs.reasoning : "low"));
   const [levels, setLevels] = useState([]); // live microphone levels for the recording bar
   const newChatProjectRef = useRef(null); // project for the next chat, when started inside one
   const micIntentRef = useRef("keep"); // what happens when a recording ends: keep, send or cancel // conversation to delete
@@ -202,8 +205,9 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
 
   useEffect(() => {
     const feed = feedRef.current;
-    if (feed) feed.scrollTo({ top: feed.scrollHeight, behavior: "smooth" });
-  }, [messages, busy]);
+    // While the answer is being written the page follows it at once; a smooth scroll would lag behind.
+    if (feed) feed.scrollTo({ top: feed.scrollHeight, behavior: streamText ? "auto" : "smooth" });
+  }, [messages, busy, streamText]);
 
   function handleError(err) {
     if (err.status === 401) {
@@ -549,12 +553,31 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
         }]);
       }
 
-      const data = await api(`/api/conversations/${conversationId}/messages`, {
-        method: "POST",
-        body: { message, attachmentIds: ids, useCalendar: calendarOn && useCalendar },
+      // Pieces of the answer are shown at most once per screen frame.
+      const stream = streamRef.current;
+      stream.text = "";
+      const flush = () => {
+        stream.frame = 0;
+        if (activeRef.current === conversationId) setStreamText(stream.text);
+      };
+      const data = await apiStream(`/api/conversations/${conversationId}/messages/stream`, {
+        message, attachmentIds: ids, useCalendar: calendarOn && useCalendar, voice: voice || undefined,
+      }, {
+        onDelta: (piece) => {
+          stream.text += piece;
+          if (!stream.frame) stream.frame = requestAnimationFrame(flush);
+        },
+        onReset: () => {
+          stream.text = "";
+          if (!stream.frame) stream.frame = requestAnimationFrame(flush);
+        },
       });
+      if (stream.frame) cancelAnimationFrame(stream.frame);
+      stream.frame = 0;
+      const streamed = Boolean(stream.text);
+      setStreamText("");
       if (activeRef.current === conversationId) {
-        setMessages((list) => [...list, data.message]);
+        setMessages((list) => [...list, streamed ? { ...data.message, key: "streaming" } : data.message]);
         const proposed = data.actions || [];
         setActions((list) => [...list.filter((a) => !proposed.some((p) => p.id === a.id)), ...proposed]);
         if (speakReplies && !voice) speakReply(data.message.content);
@@ -573,6 +596,9 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
       handleError(err);
       return null;
     } finally {
+      if (streamRef.current.frame) cancelAnimationFrame(streamRef.current.frame);
+      streamRef.current.frame = 0;
+      setStreamText("");
       setBusy(false);
     }
   }
@@ -668,7 +694,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
     setThemePreference(session.prefs.theme);
     setThemeState(effectiveTheme());
     setSpeakReplies(session.prefs.readAloud);
-    setReasoning(session.prefs.reasoning || "low");
+    setReasoning(session.prefs.reasoning && session.prefs.reasoning !== "none" ? session.prefs.reasoning : "low");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.prefs?.theme, session.prefs?.readAloud, session.prefs?.reasoning]);
 
@@ -788,24 +814,24 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
       <main className={`relative z-10 flex min-w-0 flex-1 flex-col bg-canvas transition-[transform,border-radius] duration-300 ease-out md:transform-none md:rounded-none ${
         chatsOpen ? "origin-left translate-x-[min(86vw,300px)] scale-[0.92] overflow-hidden rounded-[22px] shadow-2xl" : ""
       }`}>
-        <header className="flex h-12 shrink-0 items-center gap-1 border-b border-border px-2 pt-[env(safe-area-inset-top)] md:px-4">
+        <header className="flex h-12 shrink-0 items-center gap-1 border-b border-border px-2 pt-[env(safe-area-inset-top)] md:px-3">
           <IconButton
             label={sidebarShown ? t("Hide sidebar") : t("Show sidebar")}
             onClick={() => setSidebarShown((v) => !v)}
             aria-expanded={sidebarShown}
-            className="size-11 max-md:hidden"
+            className="size-9 max-md:hidden"
           >
-            <PanelLeft size={18} aria-hidden="true" />
+            <PanelLeft size={17} aria-hidden="true" />
           </IconButton>
-          <IconButton label={t("Chats")} className="size-11 !rounded-full bg-raised md:hidden" onClick={() => setChatsOpen(true)}>
-            <MenuIcon size={20} aria-hidden="true" />
+          <IconButton label={t("Chats")} className="size-11 md:hidden" onClick={() => setChatsOpen(true)}>
+            <MenuIcon size={19} aria-hidden="true" />
           </IconButton>
-          <div className="flex min-w-0 flex-1 items-center justify-center gap-2 md:justify-start">
-            <h1 className="truncate text-center text-[15px] font-medium md:text-left">{active?.title || (activeId ? t("Chat") : t("New chat"))}</h1>
+          <div className="flex min-w-0 flex-1 items-center gap-1">
+            <h1 className="truncate text-sm font-medium">{active?.title || (activeId ? t("Chat") : t("New chat"))}</h1>
             {active && (
               <Menu trigger={
-                <button type="button" aria-label={t("Chat options")} className="grid size-11 shrink-0 place-items-center rounded-full text-fg-muted hover:bg-raised hover:text-fg">
-                  <MoreHorizontal size={18} aria-hidden="true" />
+                <button type="button" aria-label={t("Chat options")} className="grid size-11 shrink-0 place-items-center rounded-md text-fg-muted hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg md:size-9">
+                  <MoreHorizontal size={17} aria-hidden="true" />
                 </button>
               } align="start">
                 <MenuItem icon={Pencil} onSelect={() => { setRenaming(active); setRenameText(active.title || ""); }}>{t("Rename")}</MenuItem>
@@ -818,12 +844,12 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
           </div>
           {status !== "idle" && (
             <span className="mr-1 hidden sm:block" aria-hidden="true">
-              <OrbView status={status} size={26} decorative />
+              <OrbView status={status} size={22} decorative />
             </span>
           )}
           <Menu trigger={
             <button type="button" aria-label={`Account: ${user?.username || ""}`}
-              className="grid size-7 place-items-center rounded-full bg-raised text-xs font-medium uppercase hover:bg-border">
+              className="grid size-7 place-items-center rounded-full border border-border bg-raised text-xs font-medium uppercase hover:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg">
               {(user?.username || "?").slice(0, 1)}
             </button>
           }>
@@ -852,10 +878,10 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
               onStarter={(text) => { setInput(text); document.querySelector("textarea[aria-label='Message']")?.focus(); }}
             />
           ) : (
-            <div className="mx-auto flex max-w-3xl flex-col gap-7 px-4 py-6 md:px-6">
-              {messages.map((m) => (
+            <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 md:px-6">
+              {(busy && streamText ? [...messages, { id: "streaming", role: "assistant", content: streamText }] : messages).map((m) => (
                 <Message
-                  key={m.id}
+                  key={m.key ?? m.id}
                   message={m}
                   onOpenFile={setViewing}
                   onEdit={editMessage}
@@ -865,10 +891,10 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
                   busy={busy}
                 />
               ))}
-              {busy && (
-                <div className="flex items-center gap-3 text-fg-muted" aria-label={t("Thinking")}>
-                  <OrbView status="thinking" size={24} decorative />
-                  <span className="text-sm">{t("Thinking…")}</span>
+              {busy && !streamText && (
+                <div className="flex items-center gap-2 text-fg-subtle" role="status" aria-label={t("Thinking")}>
+                  <OrbView status="thinking" size={20} decorative />
+                  <span className="font-mono text-xs">{t("Thinking…")}</span>
                 </div>
               )}
               {actions.length > 0 && (
@@ -883,7 +909,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
         </div>
 
         {error && (
-          <p role="alert" className="mx-auto mb-2 w-[min(92%,48rem)] rounded-xl bg-danger-soft px-4 py-2 text-sm text-danger">
+          <p role="alert" className="mx-auto mb-2 w-[min(92%,48rem)] rounded-lg border border-danger/30 bg-danger-soft px-3.5 py-2 text-sm text-danger">
             {error}
           </p>
         )}
@@ -910,7 +936,6 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
             calendarOn={calendarOn}
             useCalendar={useCalendar}
             onToggleCalendar={() => setUseCalendar((v) => !v)}
-            model={features.model}
           />
           <input
             ref={cameraInputRef}
@@ -1101,13 +1126,13 @@ function EmptyState({ assistantName, activeId, onStarter }) {
 // A proposal that changes data (calendar event, note deletion). Runs only on Confirm.
 function ActionCard({ action, onConfirm, onCancel }) {
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border p-3.5 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-3 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
-        <div className="font-medium">{action.title}</div>
-        {action.details && <div className="mt-0.5 truncate text-sm text-fg-muted">{action.details}</div>}
+        <div className="text-sm font-medium">{action.title}</div>
+        {action.details && <div className="mt-0.5 truncate text-[13px] text-fg-muted">{action.details}</div>}
       </div>
       <div className="flex gap-2">
-        <Button variant="primary" size="sm" onClick={onConfirm}><Check size={16} aria-hidden="true" /> {t("Confirm")}</Button>
+        <Button variant="primary" size="sm" onClick={onConfirm}><Check size={14} aria-hidden="true" /> {t("Confirm")}</Button>
         <Button variant="ghost" size="sm" onClick={onCancel}>{t("Cancel")}</Button>
       </div>
     </div>

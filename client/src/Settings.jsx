@@ -1,11 +1,6 @@
 import StyleSwitch from "./ui/StyleSwitch.jsx";
 import Loading from "./ui/Loading.jsx";
-import {
-  Activity, BookOpen, Brain, Calendar, CheckSquare, ChevronRight, Coins, CloudSun, Download, FileText, GitBranch,
-  HardDrive, LayoutGrid, LogOut, Mail, MapPin, Palette, Plug, ShieldCheck, Sparkles, Trash2, User, Volume2,
-  KeyRound, Monitor, Moon, Sun, SlidersHorizontal, Puzzle, Languages, SunMoon, Mic, Cpu, Users,
-  Globe, CalendarDays, Inbox, Blocks, ChevronLeft,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "./api.js";
@@ -14,21 +9,21 @@ import { getStyle } from "./style.js";
 import { useI18n } from "./i18n/context.jsx";
 import { currentLocale, LANGUAGES, t } from "./i18n/index.js";
 import {
-  Badge, Button, Card, Field, FullPage, IconButton, Input, Modal, Select, Switch, Tabs,
+  Badge, Button, Field, FullPage, IconButton, Input, Modal, Select, Switch, Tabs,
 } from "./ui/ui.jsx";
 
 // Settings is a full page, like the ChatGPT app: a grouped list, and each section opens
 // on its own page with a back arrow. Everything here is saved on the server.
 const SECTIONS = [
-  { value: "account", label: "Account", icon: User },
-  { value: "appearance", label: "Appearance", icon: Palette },
-  { value: "personal", label: "Personalisation", icon: Sparkles },
-  { value: "voice", label: "Voice", icon: Volume2 },
-  { value: "apps", label: "Apps", icon: LayoutGrid },
-  { value: "memory", label: "Memory", icon: Brain },
-  { value: "mail", label: "Mail and notifications", icon: Mail },
-  { value: "usage", label: "Usage", icon: Activity },
-  { value: "data", label: "Data controls", icon: Download },
+  { value: "account", label: "Account" },
+  { value: "appearance", label: "Appearance" },
+  { value: "personal", label: "Personalisation" },
+  { value: "voice", label: "Voice" },
+  { value: "apps", label: "Apps" },
+  { value: "memory", label: "Memory" },
+  { value: "mail", label: "Mail and notifications" },
+  { value: "usage", label: "Usage" },
+  { value: "data", label: "Data controls" },
 ];
 
 // Like ChatGPT and Claude: on wide screens a navigation column in groups on the left, the page on the right.
@@ -37,7 +32,7 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
   const [page, setPage] = useState(initialPage);
   const wide = useMediaQuery("(min-width: 768px)");
   if (!open) return null;
-  const sections = isAdmin ? [...SECTIONS, { value: "admin", label: "Admin", icon: ShieldCheck }] : SECTIONS;
+  const sections = isAdmin ? [...SECTIONS, { value: "admin", label: "Admin" }] : SECTIONS;
   // On wide screens the admin pages are entries of their own in the navigation.
   const allSections = isAdmin ? [...sections, ...ADMIN_ITEMS] : sections;
   const active = page ?? (wide ? "account" : null);
@@ -52,10 +47,10 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
   ];
 
   const nav = (
-    <nav aria-label={t("Settings")} className="grid gap-5">
+    <nav aria-label={t("Settings")} className="grid gap-6">
       {groups.map((group) => (
         <div key={group.label} className="grid gap-0.5">
-          <div className="px-2.5 pb-1.5 text-[12px] font-medium text-fg-subtle">{group.label}</div>
+          <div className={`${CAPTION} px-2.5 pb-1.5`}>{group.label}</div>
           {group.items.map((value) => {
             const s = allSections.find((x) => x.value === value);
             if (!s) return null;
@@ -66,25 +61,25 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
                 type="button"
                 aria-current={selected ? "page" : undefined}
                 onClick={() => setPage(s.value)}
-                className={`flex h-8 w-full items-center gap-3 rounded-lg px-2.5 text-left text-[14px] transition-colors ${
-                  selected ? "bg-fg/10 font-medium text-fg" : "text-fg-muted hover:bg-fg/5 hover:text-fg"
+                className={`flex h-8 w-full items-center rounded-md px-2.5 text-left text-[14px] transition-colors ${
+                  selected ? "bg-raised font-medium text-fg" : "text-fg-muted hover:bg-raised/60 hover:text-fg"
                 }`}
               >
-                <s.icon size={16} aria-hidden="true" className="shrink-0" />
                 <span className="truncate">{t(s.label)}</span>
               </button>
             );
           })}
         </div>
       ))}
-      <button
-        type="button"
-        onClick={onSignOut}
-        className="flex h-8 w-full items-center gap-3 rounded-lg px-2.5 text-left text-[14px] text-danger transition-colors hover:bg-fg/5"
-      >
-        <LogOut size={16} aria-hidden="true" className="shrink-0" />
-        <span>{t("Sign out")}</span>
-      </button>
+      <div className="border-t border-border pt-3">
+        <button
+          type="button"
+          onClick={onSignOut}
+          className="flex h-8 w-full items-center rounded-md px-2.5 text-left text-[14px] text-danger transition-colors hover:bg-raised/60"
+        >
+          {t("Sign out")}
+        </button>
+      </div>
     </nav>
   );
 
@@ -104,30 +99,26 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
     </>
   );
 
-  // Phones: the menu of cards first (the account, then the pages).
+  // Phones: a plain list first (the account, then the pages).
   const phoneMenu = (
     <div className="grid gap-6">
       <Group>
         <button
           type="button"
           onClick={() => setPage("account")}
-          className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left transition-colors hover:bg-fg/5 active:bg-fg/10"
+          className="flex min-h-14 w-full items-center gap-3 px-1 py-2 text-left transition-colors active:bg-raised"
         >
-          <span className="grid size-12 shrink-0 place-items-center rounded-full bg-canvas text-[17px] font-semibold uppercase">
-            {(username || "?").slice(0, 1)}
-          </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[17px] font-semibold">{username}</span>
-            <span className="block text-[14px] text-fg-subtle">{t("Signed in")}</span>
+            <span className="block truncate text-[15px] font-medium">{username}</span>
+            <span className="block text-[13px] text-fg-subtle">{t("Signed in")}</span>
           </span>
-          <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-fg-subtle" />
+          <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-fg-subtle" />
         </button>
       </Group>
       <Group>
         {sections.filter((s) => s.value !== "account").map((s) => (
           <Row
             key={s.value}
-            icon={s.icon}
             label={t(s.label)}
             value={s.value === "appearance" ? t(getStyle() === "koi" ? "Koi" : "Classic") : undefined}
             onClick={() => setPage(s.value)}
@@ -143,13 +134,13 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
   return (
     <FullPage title={wide || !current ? t("Settings") : t(current.label)} onBack={back} onClose={() => onOpenChange(false)} wide>
       {wide ? (
-        <div className="grid gap-8 md:grid-cols-[16rem_minmax(0,1fr)] md:items-start">
+        <div className="grid gap-10 md:grid-cols-[14rem_minmax(0,1fr)] md:items-start">
           <div className="md:sticky md:top-2 md:max-h-[calc(100dvh-5.5rem)] md:overflow-y-auto">{nav}</div>
-          <div className="min-w-0">
+          <div className="min-w-0 max-w-3xl">
             {current && (
-              <div className="mb-6">
-                <h2 className="text-[22px] font-semibold tracking-tight">{t(current.label)}</h2>
-                {current.note && <p className="mt-1 text-[14px] text-fg-muted">{t(current.note)}</p>}
+              <div className="mb-8">
+                <h2 className="text-[20px] font-medium tracking-tight">{t(current.label)}</h2>
+                {current.note && <p className="mt-1 text-[13px] text-fg-muted">{t(current.note)}</p>}
               </div>
             )}
             {renderPage(active)}
@@ -160,33 +151,26 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
   );
 }
 
-// A rounded card of rows. The dividers start after the icon, as in iOS settings.
+// Small mono lowercase caption, the same voice as the pond captions.
+const CAPTION = "font-mono text-[11px] lowercase tracking-wide text-fg-subtle";
+
+// A plain list of tappable rows on phones: hairlines between them, no card.
 function Group({ children }) {
-  return <div className="overflow-hidden rounded-[20px] bg-raised">{children}</div>;
+  return <div className="divide-y divide-border border-y border-border">{children}</div>;
 }
 
-function Row({ icon: Icon, label, value, onClick, destructive = false }) {
-  if (destructive) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className="flex h-[52px] w-full items-center justify-center text-[17px] font-medium text-danger transition-colors hover:bg-fg/5 active:bg-fg/10"
-      >
-        {label}
-      </button>
-    );
-  }
+function Row({ label, value, onClick, destructive = false }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="relative flex h-[52px] w-full items-center gap-3 px-4 text-left text-[17px] transition-colors hover:bg-fg/5 active:bg-fg/10 before:absolute before:left-12 before:right-0 before:top-0 before:h-px before:bg-border first:before:hidden"
+      className={`flex min-h-12 w-full items-center gap-3 px-1 text-left text-[15px] transition-colors active:bg-raised ${
+        destructive ? "text-danger" : "text-fg"
+      }`}
     >
-      {Icon && <Icon size={20} aria-hidden="true" className="shrink-0 text-fg-muted" />}
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      {value && <span className="max-w-[45%] shrink truncate text-[16px] text-fg-subtle">{value}</span>}
-      <ChevronRight size={17} aria-hidden="true" className="shrink-0 text-fg-subtle" />
+      {value && <span className="max-w-[45%] shrink truncate text-[14px] text-fg-subtle">{value}</span>}
+      {!destructive && <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-fg-subtle" />}
     </button>
   );
 }
@@ -203,35 +187,55 @@ function useLoad(load, deps = []) {
 function Notice({ text, error }) {
   if (!text) return null;
   return (
-    <p role={error ? "alert" : "status"} className={`rounded-xl px-4 py-2.5 text-sm ${
-      error ? "bg-danger-soft text-danger" : "bg-raised text-fg"
+    <p role={error ? "alert" : "status"} className={`rounded-md border px-3 py-2 text-[13px] ${
+      error ? "border-danger/30 bg-danger-soft text-danger" : "border-border text-fg-muted"
     }`}>{text}</p>
   );
 }
 
-// A settings block, flat like Claude and ChatGPT: a title and a short note, then the rows. A hairline separates blocks.
+// A group of settings: a mono caption and a short note, then the rows. A hairline starts each group.
 function Section({ title, description, children }) {
   return (
-    <section className="grid gap-4 border-b border-border py-6 first:pt-0 last:border-b-0">
-      <div>
-        <h3 className="text-[15px] font-semibold">{title}</h3>
-        {description && <p className="mt-1 text-[13px] leading-snug text-fg-muted">{description}</p>}
-      </div>
+    <section className="border-t border-border pt-4 first:border-t-0 first:pt-0">
+      {(title || description) && (
+        <div className="mb-2">
+          {title && <h3 className={CAPTION}>{title}</h3>}
+          {description && <p className="mt-1 text-[13px] leading-snug text-fg-muted">{description}</p>}
+        </div>
+      )}
       {children}
     </section>
   );
 }
 
-// One setting: the name and what it does on the left, the control on the right (below it on phones).
-function SettingRow({ label, description, children }) {
+// Rows under one caption: a hairline between them.
+function Rows({ children, className = "" }) {
+  return <div className={`divide-y divide-border ${className}`}>{children}</div>;
+}
+
+// One setting: the name and a one-line hint on the left, the control on the right.
+// On phones the control sits below, unless `inline` (switches and buttons stay on the same line).
+function SettingRow({ label, description, children, inline = false, className = "" }) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+    <div className={`flex min-h-11 gap-x-6 gap-y-2 py-3 ${
+      inline ? "items-center justify-between" : "flex-col sm:flex-row sm:items-center sm:justify-between"
+    } ${className}`}>
       <div className="min-w-0">
-        <div className="text-[15px] font-medium">{label}</div>
+        <div className="text-[14px] leading-5 text-fg">{label}</div>
         {description && <div className="mt-0.5 text-[13px] leading-snug text-fg-muted">{description}</div>}
       </div>
-      <div className="shrink-0">{children}</div>
+      {children && <div className={inline ? "shrink-0" : "w-full sm:w-auto sm:shrink-0"}>{children}</div>}
     </div>
+  );
+}
+
+// A yes/no setting: the sentence on the left, the switch on the right.
+function ToggleRow({ label, description, checked, onCheckedChange, disabled, className }) {
+  return (
+    <SettingRow inline label={label} description={description} className={className}>
+      <Switch checked={checked} disabled={disabled} onCheckedChange={onCheckedChange}
+        label={<span className="sr-only">{label}</span>} />
+    </SettingRow>
   );
 }
 
@@ -291,18 +295,18 @@ function AccountTab({ username, onChanged, onSignOut }) {
 
   return (
     <div className="grid gap-8">
-      <Section icon={User} title={t("Username")} description={t("The name you sign in with.")}>
-        <form className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end" onSubmit={saveName}>
-          <Field label={t("Username")} hint={t("2–20 letters, digits, - or _")}>
+      <Section title={t("Username")} description={t("The name you sign in with.")}>
+        <form className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={saveName}>
+          <Field label={t("Username")} hint={t("2–20 letters, digits, - or _")} className="sm:w-72">
             <Input value={name} maxLength={20} autoCapitalize="none" autoComplete="username"
               onChange={(e) => setName(e.target.value)} />
           </Field>
-          <Button type="submit" disabled={busy !== "" || name.trim().toLowerCase() === username}>{t("Save username")}</Button>
+          <Button type="submit" className="max-sm:h-11 sm:mb-[22px]" disabled={busy !== "" || name.trim().toLowerCase() === username}>{t("Save username")}</Button>
         </form>
       </Section>
 
-      <Section icon={KeyRound} title={t("Password")} description={t("Changing it signs you out on every device.")}>
-        <form className="grid gap-4" onSubmit={savePassword}>
+      <Section title={t("Password")} description={t("Changing it signs you out on every device.")}>
+        <form className="mt-3 grid max-w-sm gap-4" onSubmit={savePassword}>
           <Field label={t("Current password")}>
             <Input type="password" autoComplete="current-password" value={password.current}
               onChange={(e) => setPassword({ ...password, current: e.target.value })} />
@@ -312,12 +316,12 @@ function AccountTab({ username, onChanged, onSignOut }) {
               onChange={(e) => setPassword({ ...password, next: e.target.value })} />
           </Field>
           <div>
-            <Button type="submit" disabled={busy !== "" || !password.current || password.next.length < 8}>              {t("Change password")}            </Button>
+            <Button type="submit" className="max-sm:h-11" disabled={busy !== "" || !password.current || password.next.length < 8}>{t("Change password")}</Button>
           </div>
         </form>
       </Section>
-      <Section icon={Monitor} title={t("Devices")} description={t("Keeps this device signed in and signs out all the others.")}>
-        <div><Button onClick={signOutOthers}>{t("Sign out other devices")}</Button></div>
+      <Section title={t("Devices")} description={t("Keeps this device signed in and signs out all the others.")}>
+        <div className="mt-3"><Button className="max-sm:h-11" onClick={signOutOthers}>{t("Sign out other devices")}</Button></div>
       </Section>
       <Notice text={message.text} error={message.error} />
     </div>
@@ -332,7 +336,6 @@ const PERSONALITY = [
   { value: "detailed", label: "Detailed" },
 ];
 const REASONING = [
-  { value: "none", label: "Off" },
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
@@ -384,8 +387,8 @@ function PersonalTab() {
 
   return (
     <div className="grid gap-8">
-      <Section icon={FileText} title={t("Your instructions")} description={t("Taken into account in every new chat.")}>
-        <form className="grid gap-3" onSubmit={saveInstructions}>
+      <Section title={t("Your instructions")} description={t("Taken into account in every new chat.")}>
+        <form className="mt-3 grid gap-3" onSubmit={saveInstructions}>
           <textarea
             className={`${TEXTAREA} min-h-28 resize-y`}
             maxLength={1500}
@@ -400,39 +403,41 @@ function PersonalTab() {
         </form>
       </Section>
 
-      <Section icon={SlidersHorizontal} title={t("Answers")}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t("Style")}>
-            <Select value={form.personality} onChange={(e) => savePrefs({ personality: e.target.value })}>
+      <Section title={t("Answers")}>
+        <Rows>
+          <SettingRow label={t("Style")}>
+            <Select aria-label={t("Style")} className="w-full sm:w-48" value={form.personality} onChange={(e) => savePrefs({ personality: e.target.value })}>
               {PERSONALITY.map((p) => <option key={p.value} value={p.value}>{t(p.label)}</option>)}
             </Select>
-          </Field>
-          <Field label={t("Reply language")}>
-            <Select value={form.language} onChange={(e) => savePrefs({ language: e.target.value })}>
+          </SettingRow>
+          <SettingRow label={t("Reply language")}>
+            <Select aria-label={t("Reply language")} className="w-full sm:w-48" value={form.language} onChange={(e) => savePrefs({ language: e.target.value })}>
               {LANGUAGE.map((l) => <option key={l.value} value={l.value}>{t(l.label)}</option>)}
             </Select>
-          </Field>
-          <Field label={t("Thinking")} hint={t("More thinking gives better answers to hard questions, but takes longer and costs more.")}>
-            <Select value={form.reasoning || "low"} onChange={(e) => savePrefs({ reasoning: e.target.value })}>
+          </SettingRow>
+          <SettingRow label={t("Thinking")} description={t("More thinking gives better answers to hard questions, but takes longer and costs more.")}>
+            <Select aria-label={t("Thinking")} className="w-full sm:w-48" value={form.reasoning && form.reasoning !== "none" ? form.reasoning : "low"} onChange={(e) => savePrefs({ reasoning: e.target.value })}>
               {REASONING.map((r) => <option key={r.value} value={r.value}>{t(r.label)}</option>)}
             </Select>
-          </Field>
-        </div>
+          </SettingRow>
+        </Rows>
       </Section>
 
-      <Section icon={Puzzle} title={t("Features")}>
-        <Switch
-          checked={form.memory && allowed.memory}
-          disabled={!allowed.memory}
-          onCheckedChange={(v) => savePrefs({ memory: v })}
-          label={allowed.memory ? t("Memory: remember what I ask it to remember.") : t("Memory is turned off for your account.")}
-        />
-        <Switch
-          checked={form.webSearch && allowed.web}
-          disabled={!allowed.web}
-          onCheckedChange={(v) => savePrefs({ webSearch: v })}
-          label={allowed.web ? t("Web search and reading pages.") : t("Web search is turned off for your account.")}
-        />
+      <Section title={t("Features")}>
+        <Rows>
+          <ToggleRow
+            checked={form.memory && allowed.memory}
+            disabled={!allowed.memory}
+            onCheckedChange={(v) => savePrefs({ memory: v })}
+            label={allowed.memory ? t("Memory: remember what I ask it to remember.") : t("Memory is turned off for your account.")}
+          />
+          <ToggleRow
+            checked={form.webSearch && allowed.web}
+            disabled={!allowed.web}
+            onCheckedChange={(v) => savePrefs({ webSearch: v })}
+            label={allowed.web ? t("Web search and reading pages.") : t("Web search is turned off for your account.")}
+          />
+        </Rows>
       </Section>
     </div>
   );
@@ -441,9 +446,9 @@ function PersonalTab() {
 // ---- Appearance ----
 
 const THEMES = [
-  { value: "system", label: "System", icon: Monitor },
-  { value: "light", label: "Light", icon: Sun },
-  { value: "dark", label: "Dark", icon: Moon },
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
 ];
 
 function AppearanceTab() {
@@ -483,26 +488,27 @@ function AppearanceTab() {
 
   return (
     <div className="grid gap-8">
-      <Section icon={Languages} title={t("Interface language")} description={t("Interface language and reply language are separate.")}>
-        <SettingRow label={t("Language")} description={t("The language of buttons and menus.")}>
-          <Select className="w-44" value={lang} onChange={(e) => chooseLanguage(e.target.value)}>
-            {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
-          </Select>
-        </SettingRow>
+      <Section title={t("Interface language")} description={t("Interface language and reply language are separate.")}>
+        <Rows>
+          <SettingRow label={t("Language")} description={t("The language of buttons and menus.")}>
+            <Select aria-label={t("Language")} className="w-full sm:w-48" value={lang} onChange={(e) => chooseLanguage(e.target.value)}>
+              {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+            </Select>
+          </SettingRow>
+        </Rows>
       </Section>
-      <Section icon={SunMoon} title={t("Theme")} description={t("System follows the setting of your phone or computer.")}>
-        <div className="grid grid-cols-3 gap-3">
+      <Section title={t("Theme")} description={t("System follows the setting of your phone or computer.")}>
+        <div className="mt-3 grid grid-cols-3 gap-px overflow-hidden rounded-md border border-border bg-border sm:max-w-sm">
           {THEMES.map((option) => (
             <button
               key={option.value}
               type="button"
               aria-pressed={theme === option.value}
               onClick={() => choose(option.value)}
-              className={`flex flex-col items-center gap-2 rounded-2xl border px-2 py-3.5 text-[13px] transition-colors ${
-                theme === option.value ? "border-fg bg-canvas text-fg" : "border-transparent bg-canvas/60 text-fg-muted hover:text-fg"
+              className={`h-11 text-[14px] transition-colors sm:h-9 ${
+                theme === option.value ? "bg-raised font-medium text-fg" : "bg-surface text-fg-muted hover:text-fg"
               }`}
             >
-              <option.icon size={22} aria-hidden="true" />
               {t(option.label)}
             </button>
           ))}
@@ -551,18 +557,22 @@ function VoiceTab() {
 
   return (
     <div className="grid gap-8">
-      <Section icon={Volume2} title={t("Replies")} description={t("Read aloud when a reply arrives. You can still switch it on or off in the account menu.")}>
-        <Switch checked={prefs.readAloud} onCheckedChange={(v) => save({ readAloud: v })} label={t("Read replies aloud by default.")} />
+      <Section title={t("Replies")} description={t("Read aloud when a reply arrives. You can still switch it on or off in the account menu.")}>
+        <Rows>
+          <ToggleRow checked={prefs.readAloud} onCheckedChange={(v) => save({ readAloud: v })} label={t("Read replies aloud by default.")} />
+        </Rows>
       </Section>
-      <Section icon={Mic} title={t("Voice")}>
-        <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
-          <Field label={t("Voice")}>
-            <Select value={prefs.voice} onChange={(e) => save({ voice: e.target.value })}>
-              {VOICE_NAMES.map((v) => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
-            </Select>
-          </Field>
-          <Button onClick={test} disabled={testing}>{testing ? t("Playing…") : t("Play sample")}</Button>
-        </div>
+      <Section title={t("Voice")}>
+        <Rows>
+          <SettingRow label={t("Voice")}>
+            <div className="flex gap-2">
+              <Select aria-label={t("Voice")} className="min-w-0 flex-1 sm:w-36 sm:flex-none" value={prefs.voice} onChange={(e) => save({ voice: e.target.value })}>
+                {VOICE_NAMES.map((v) => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
+              </Select>
+              <Button className="shrink-0 max-sm:h-11" onClick={test} disabled={testing}>{testing ? t("Playing…") : t("Play sample")}</Button>
+            </div>
+          </SettingRow>
+        </Rows>
       </Section>
     </div>
   );
@@ -586,20 +596,6 @@ const APP_INFO = {
   github: "See the issues and pull requests assigned to you, and your notifications.",
   notion: "Search your Notion pages. Read-only.",
   connector: "A connector your admin set up.",
-};
-
-const APP_ICONS = {
-  weather: CloudSun,
-  currency: Coins,
-  wikipedia: BookOpen,
-  maps: MapPin,
-  gmail: Mail,
-  calendar: Calendar,
-  drive: HardDrive,
-  todoist: CheckSquare,
-  github: GitBranch,
-  notion: FileText,
-  connector: Plug,
 };
 
 const CATEGORIES = [
@@ -639,8 +635,8 @@ function AppsTab() {
   }
 
   return (
-    <div className="grid gap-7">
-      <p className="text-sm text-fg-muted">
+    <div className="grid gap-8">
+      <p className="max-w-prose text-[13px] text-fg-muted">
         {t("Install an app to let the assistant use it. Anything that changes something asks you to confirm first.")}
       </p>
       {!data.googleConfigured && <Notice text={t("Google sign-in is not set up on this server yet, so Google apps cannot be installed.")} />}
@@ -650,57 +646,57 @@ function AppsTab() {
         const apps = data.apps.filter((app) => app.category === category.value);
         if (!apps.length) return null;
         return (
-          <section key={category.value} className="grid gap-3">
-            <h3 className="text-sm font-semibold">{t(category.label)}</h3>
-            <Card className="divide-y divide-border">
+          <Section key={category.value} title={t(category.label)}>
+            <Rows>
               {apps.map((app) => {
-                const Icon = APP_ICONS[app.id] || Plug;
                 const info = APP_INFO[app.id] || APP_INFO.connector;
                 const toggle = app.installed || app.category === "ready" || app.category === "connector";
                 return (
-                  <div key={app.id} className="flex items-center gap-3 px-4 py-3.5">
-                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-raised">
-                      <Icon size={18} aria-hidden="true" className="text-fg-muted" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
+                  <SettingRow
+                    key={app.id}
+                    inline
+                    label={(
+                      <span className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{t(app.name)}</span>
                         {!app.allowed && <Badge>{t("Off for your account")}</Badge>}
-                      </div>
-                      <div className="mt-0.5 text-sm text-fg-muted">{t(info)}</div>
+                      </span>
+                    )}
+                    description={t(info)}
+                  >
+                    <div className="flex items-center gap-2">
+                      {toggle && (
+                        <Switch
+                          checked={app.enabled}
+                          disabled={!app.allowed || busy === app.id}
+                          onCheckedChange={(v) => setEnabled(app, v)}
+                          label={<span className="sr-only">{t("Use {name}", { name: t(app.name) })}</span>}
+                        />
+                      )}
+                      {!toggle && app.category === "google" && (
+                        <Button size="sm" className="max-sm:h-11" disabled={!app.allowed || !data.googleConfigured}
+                          onClick={() => { window.location.href = "/api/google/connect"; }}>
+                          {t("Install")}
+                        </Button>
+                      )}
+                      {!toggle && app.category === "token" && (
+                        <Button size="sm" className="max-sm:h-11" disabled={!app.allowed || !data.secretsEnabled}
+                          onClick={() => setTokenFor(app)}>
+                          {t("Connect")}
+                        </Button>
+                      )}
+                      {app.category === "token" && app.installed && (
+                        <Button size="sm" variant="ghost" className="max-sm:h-11" onClick={() => disconnect(app)}>{t("Disconnect")}</Button>
+                      )}
                     </div>
-                    {toggle && (
-                      <Switch
-                        checked={app.enabled}
-                        disabled={!app.allowed || busy === app.id}
-                        onCheckedChange={(v) => setEnabled(app, v)}
-                        label={<span className="sr-only">{t("Use {name}", { name: t(app.name) })}</span>}
-                      />
-                    )}
-                    {!toggle && app.category === "google" && (
-                      <Button size="sm" variant="primary" disabled={!app.allowed || !data.googleConfigured}
-                        onClick={() => { window.location.href = "/api/google/connect"; }}>
-                        {t("Install")}
-                      </Button>
-                    )}
-                    {!toggle && app.category === "token" && (
-                      <Button size="sm" variant="primary" disabled={!app.allowed || !data.secretsEnabled}
-                        onClick={() => setTokenFor(app)}>
-                        {t("Connect")}
-                      </Button>
-                    )}
-                    {app.category === "token" && app.installed && (
-                      <Button size="sm" variant="ghost" onClick={() => disconnect(app)}>{t("Disconnect")}</Button>
-                    )}
-                  </div>
+                  </SettingRow>
                 );
               })}
-            </Card>
-          </section>
+            </Rows>
+          </Section>
         );
       })}
       {!data.apps.some((a) => a.category === "connector") && (
-        <p className="text-sm text-fg-subtle">{t("More apps appear here when your admin adds connectors.")}</p>
+        <p className="text-[13px] text-fg-subtle">{t("More apps appear here when your admin adds connectors.")}</p>
       )}
       {tokenFor && (
         <TokenDialog
@@ -806,14 +802,18 @@ function DataTab({ onChatsChanged }) {
 
   return (
     <div className="grid gap-8">
-      <Section icon={Download} title={t("Export")} description={t("Download your chats, memories and notes as one JSON file.")}>
-        <div><Button onClick={exportData}>{t("Export my data")}</Button></div>
-      </Section>
-      <Section icon={Trash2} title={t("Delete chats")} description={t("Removes all of your chats. Memories and notes are kept.")}>
-        <div><Button variant="danger" onClick={() => setConfirm(true)}>{t("Delete all chats")}</Button></div>
-      </Section>
-      <Section icon={Brain} title={t("Delete memories")} description={t("Forgets everything the assistant saved about you.")}>
-        <div><Button variant="danger" onClick={() => setForgetAll(true)}>{t("Delete all memories")}</Button></div>
+      <Section>
+        <Rows>
+          <SettingRow inline label={t("Export")} description={t("Download your chats, memories and notes as one JSON file.")}>
+            <Button className="max-sm:h-11" onClick={exportData}>{t("Export my data")}</Button>
+          </SettingRow>
+          <SettingRow inline label={t("Delete chats")} description={t("Removes all of your chats. Memories and notes are kept.")}>
+            <Button variant="danger" className="max-sm:h-11" onClick={() => setConfirm(true)}>{t("Delete all chats")}</Button>
+          </SettingRow>
+          <SettingRow inline label={t("Delete memories")} description={t("Forgets everything the assistant saved about you.")}>
+            <Button variant="danger" className="max-sm:h-11" onClick={() => setForgetAll(true)}>{t("Delete all memories")}</Button>
+          </SettingRow>
+        </Rows>
       </Section>
       <Modal
         open={forgetAll}
@@ -912,12 +912,12 @@ function MailTab() {
   }
 
   return (
-    <form className="grid gap-7" onSubmit={save}>
-      <p className="text-sm text-fg-muted">        {t("The assistant reads only the sender, subject and date of your mail. Nothing is changed or moved. Use an app password from Yahoo, not your normal password.")}      </p>
+    <form className="grid gap-8" onSubmit={save}>
+      <p className="max-w-prose text-[13px] text-fg-muted">{t("The assistant reads only the sender, subject and date of your mail. Nothing is changed or moved. Use an app password from Yahoo, not your normal password.")}</p>
       {!s.secretsEnabled && <Notice text={t("The server has no ENCRYPTION_KEY, so the password cannot be stored.")} error />}
 
-      <Section icon={User} title={t("Account")}>
-        <div className="grid gap-4 sm:grid-cols-2">
+      <Section title={t("Account")}>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <Field label={t("Mail server")}>
             <Input value={form.host} onChange={(e) => setForm({ ...form, host: e.target.value })} />
           </Field>
@@ -933,36 +933,38 @@ function MailTab() {
         </div>
       </Section>
 
-      <Section icon={Activity} title={t("Reports")}>
-        <Switch
-          checked={form.consent}
-          onCheckedChange={(v) => setForm({ ...form, consent: v, reportEnabled: v ? form.reportEnabled : false })}
-          label={t("I agree that sender, subject and date of new mail are sent to the AI to judge importance.")}
-        />
-        <Switch
-          checked={form.reportEnabled}
-          disabled={!form.consent}
-          onCheckedChange={(v) => setForm({ ...form, reportEnabled: v })}
-          label={t("Push me a notification for important mail (checked every 10 minutes).")}
-        />
+      <Section title={t("Reports")}>
+        <Rows>
+          <ToggleRow
+            checked={form.consent}
+            onCheckedChange={(v) => setForm({ ...form, consent: v, reportEnabled: v ? form.reportEnabled : false })}
+            label={t("I agree that sender, subject and date of new mail are sent to the AI to judge importance.")}
+          />
+          <ToggleRow
+            checked={form.reportEnabled}
+            disabled={!form.consent}
+            onCheckedChange={(v) => setForm({ ...form, reportEnabled: v })}
+            label={t("Push me a notification for important mail (checked every 10 minutes).")}
+          />
+        </Rows>
       </Section>
 
-      <div className="flex flex-wrap gap-2">
-        <Button variant="primary" type="submit" disabled={busy}>{t("Save")}</Button>
-        <Button onClick={showInbox} disabled={busy || !s.hasPassword}>{t("Show inbox")}</Button>
-        <Button onClick={checkNow} disabled={busy || !s.reportEnabled}>{t("Check now")}</Button>
+      <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+        <Button variant="primary" type="submit" className="max-sm:h-11" disabled={busy}>{t("Save")}</Button>
+        <Button className="max-sm:h-11" onClick={showInbox} disabled={busy || !s.hasPassword}>{t("Show inbox")}</Button>
+        <Button className="max-sm:h-11" onClick={checkNow} disabled={busy || !s.reportEnabled}>{t("Check now")}</Button>
       </div>
       <Notice text={message.text} error={message.error} />
       {inbox && (
-        <Card className="divide-y divide-border">
+        <div className="divide-y divide-border rounded-md border border-border">
           {inbox.map((m) => (
-            <div key={m.uid} className="grid gap-0.5 px-4 py-3">
-              <span className="truncate text-sm text-fg-muted">{m.from}{m.seen ? "" : " · new"}</span>
-              <span className="truncate">{m.subject}</span>
+            <div key={m.uid} className="grid gap-0.5 px-3 py-2.5">
+              <span className="truncate text-[13px] text-fg-muted">{m.from}{m.seen ? "" : " · new"}</span>
+              <span className="truncate text-[14px]">{m.subject}</span>
             </div>
           ))}
-          {!inbox.length && <div className="px-4 py-3 text-fg-muted">{t("Inbox is empty.")}</div>}
-        </Card>
+          {!inbox.length && <div className="px-3 py-2.5 text-[14px] text-fg-muted">{t("Inbox is empty.")}</div>}
+        </div>
       )}
     </form>
   );
@@ -995,28 +997,33 @@ function MemoryTab() {
   }
 
   return (
-    <div className="grid gap-5">
-      <Switch
-        checked={settings.data?.prefs.learnFromChats ?? true}
-        disabled={!settings.data}
-        onCheckedChange={setLearning}
-        label={t("Learn from my chats: save useful facts after a reply. You can delete any of them here.")}
-      />
-      <p className="text-sm text-fg-muted">        {t("Things you asked the assistant to remember. It uses them in every chat. Ask it to “remember that…” to add one.")}      </p>
-      {!data.memories.length && <Card className="px-5 py-8 text-center text-fg-muted">{t("Nothing saved yet.")}</Card>}
-      {data.memories.length > 0 && (
-        <Card className="divide-y divide-border">
-          {data.memories.map((m) => (
-            <div key={m.id} className="flex items-center gap-2 px-4 py-2">
-              <span className="min-w-0 flex-1 text-[15px]">{m.text}</span>
-              {m.source === "chat" && <Badge>{t("From a chat")}</Badge>}
-              <IconButton label={`Delete memory: ${m.text}`} onClick={() => forget(m.id)}>
-                <Trash2 size={18} aria-hidden="true" />
-              </IconButton>
-            </div>
-          ))}
-        </Card>
-      )}
+    <div className="grid gap-8">
+      <Section>
+        <Rows>
+          <ToggleRow
+            checked={settings.data?.prefs.learnFromChats ?? true}
+            disabled={!settings.data}
+            onCheckedChange={setLearning}
+            label={t("Learn from my chats: save useful facts after a reply. You can delete any of them here.")}
+          />
+        </Rows>
+      </Section>
+      <Section description={t("Things you asked the assistant to remember. It uses them in every chat. Ask it to “remember that…” to add one.")}>
+        {!data.memories.length && <p className="py-6 text-[14px] text-fg-subtle">{t("Nothing saved yet.")}</p>}
+        {data.memories.length > 0 && (
+          <Rows>
+            {data.memories.map((m) => (
+              <div key={m.id} className="flex min-h-11 items-center gap-2 py-1.5">
+                <span className="min-w-0 flex-1 break-words text-[14px]">{m.text}</span>
+                {m.source === "chat" && <Badge>{t("From a chat")}</Badge>}
+                <IconButton label={`Delete memory: ${m.text}`} className="size-11 sm:size-9" onClick={() => forget(m.id)}>
+                  <Trash2 size={16} aria-hidden="true" />
+                </IconButton>
+              </div>
+            ))}
+          </Rows>
+        )}
+      </Section>
     </div>
   );
 }
@@ -1029,36 +1036,36 @@ function UsageTab() {
   if (!data) return <Loading />;
   const { today } = data;
   return (
-    <div className="grid gap-4">
-      <p className="text-sm text-fg-muted">{t("The last 24 hours.")}</p>
-      <div className="grid gap-4 sm:grid-cols-2">
+    <Section description={t("The last 24 hours.")}>
+      <Rows>
         <Stat label={t("Messages")} value={today.messages} />
         <Stat label={t("AI tokens (approx.)")} value={today.tokens} />
-      </div>
-    </div>
+      </Rows>
+    </Section>
   );
 }
 
+// One figure: the name on the left, the number on the right.
 function Stat({ label, value, of }) {
   return (
-    <Card className="p-5">
-      <div className="text-sm text-fg-muted">{label}</div>
-      <div className="mt-2 flex items-baseline gap-2">
-        <span className="text-3xl font-semibold tabular-nums tracking-tight">{Number(value).toLocaleString()}</span>
-        {of !== null && of !== undefined && <span className="text-sm text-fg-subtle">{t("of {n}", { n: Number(of).toLocaleString() })}</span>}
-      </div>
-    </Card>
+    <div className="flex min-h-11 items-baseline justify-between gap-4 py-3">
+      <span className="text-[14px] text-fg">{label}</span>
+      <span className="flex items-baseline gap-2">
+        <span className="font-mono text-[15px] tabular-nums">{Number(value).toLocaleString()}</span>
+        {of !== null && of !== undefined && <span className="text-[13px] text-fg-subtle">{t("of {n}", { n: Number(of).toLocaleString() })}</span>}
+      </span>
+    </div>
   );
 }
 
 // ---- Admin ----
 
 const ADMIN_PAGES = [
-  { value: "users", label: "Users", note: "Accounts, invites and what each person may use", icon: Users },
-  { value: "providers", label: "AI models", note: "Which models answer, and which handle voice and images", icon: Cpu },
-  { value: "connectors", label: "Connectors", note: "The MCP servers people can connect", icon: Plug },
-  { value: "general", label: "General", note: "Defaults for new users and the server", icon: SlidersHorizontal },
-  { value: "usage", label: "Usage", note: "Messages and tokens across the server", icon: Activity },
+  { value: "users", label: "Users", note: "Accounts, invites and what each person may use" },
+  { value: "providers", label: "AI models", note: "Which models answer, and which handle voice and images" },
+  { value: "connectors", label: "Connectors", note: "The MCP servers people can connect" },
+  { value: "general", label: "General", note: "Defaults for new users and the server" },
+  { value: "usage", label: "Usage", note: "Messages and tokens across the server" },
 ];
 
 // The admin pages as menu entries. On wide screens they also sit in the settings navigation under "Administration".
@@ -1066,7 +1073,6 @@ const ADMIN_ITEMS = ADMIN_PAGES.map((page) => ({
   value: "admin:" + page.value,
   label: page.value === "usage" ? "Server usage" : page.label,
   note: page.note,
-  icon: page.icon,
 }));
 
 // The content of one admin page.
@@ -1102,43 +1108,42 @@ function AdminTab() {
   const current = ADMIN_PAGES.find((p) => p.value === section);
 
   const nav = (
-    <nav aria-label={t("Admin")} className="overflow-hidden rounded-[20px] bg-raised md:sticky md:top-3">
+    <nav aria-label={t("Admin")} className={`md:sticky md:top-3 ${wide ? "grid gap-0.5" : "divide-y divide-border border-y border-border"}`}>
       {ADMIN_PAGES.map((page) => (
         <button
           key={page.value}
           type="button"
           aria-current={section === page.value ? "page" : undefined}
           onClick={() => setPicked(page.value)}
-          className={`relative flex w-full items-center gap-3.5 px-4 py-3.5 text-left transition-colors hover:bg-fg/5 active:bg-fg/10 before:absolute before:left-16 before:right-0 before:top-0 before:h-px before:bg-border first:before:hidden ${
-            wide && section === page.value ? "bg-fg/10" : ""
-          }`}
+          className={wide
+            ? `flex h-8 w-full items-center rounded-md px-2.5 text-left text-[14px] transition-colors ${
+              section === page.value ? "bg-raised font-medium text-fg" : "text-fg-muted hover:bg-raised/60 hover:text-fg"
+            }`
+            : "flex min-h-14 w-full items-center gap-3 px-1 py-2 text-left transition-colors active:bg-raised"}
         >
-          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-canvas text-fg-muted">
-            <page.icon size={18} aria-hidden="true" />
-          </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-medium">{t(page.label)}</span>
+            <span className={wide ? "block truncate" : "block text-[15px] text-fg"}>{t(page.label)}</span>
             {!wide && <span className="block text-[13px] leading-snug text-fg-muted">{t(page.note)}</span>}
           </span>
-          <ChevronRight size={17} aria-hidden="true" className="shrink-0 text-fg-subtle" />
+          {!wide && <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-fg-subtle" />}
         </button>
       ))}
     </nav>
   );
 
   return (
-    <div className="grid gap-6 md:grid-cols-[15rem_minmax(0,1fr)] md:items-start">
+    <div className="grid gap-8 md:grid-cols-[13rem_minmax(0,1fr)] md:items-start">
       <div className={section && !wide ? "hidden" : ""}>{nav}</div>
       {section && (
-        <div className="grid min-w-0 gap-4">
+        <div className="grid min-w-0 gap-6">
           {!wide && (
-            <button type="button" onClick={() => setPicked("")} className="flex w-fit items-center gap-1 text-[15px] font-medium text-fg-muted hover:text-fg">
-              <ChevronLeft size={18} aria-hidden="true" /> {t("Admin")}
+            <button type="button" onClick={() => setPicked("")} className="flex min-h-11 w-fit items-center gap-1 text-[14px] text-fg-muted hover:text-fg">
+              <ChevronLeft size={16} aria-hidden="true" /> {t("Admin")}
             </button>
           )}
           <div>
-            <h3 className="text-[20px] font-semibold tracking-tight">{t(current.label)}</h3>
-            <p className="mt-0.5 text-[14px] text-fg-muted">{t(current.note)}</p>
+            <h3 className="text-[18px] font-medium tracking-tight">{t(current.label)}</h3>
+            <p className="mt-1 text-[13px] text-fg-muted">{t(current.note)}</p>
           </div>
           <AdminSection section={section} />
         </div>
@@ -1148,15 +1153,26 @@ function AdminTab() {
 }
 
 const FEATURE_LABELS = [
-  { key: "web", label: "Web search and reading pages", icon: Globe },
-  { key: "memory", label: "Memory", icon: Brain },
-  { key: "mail", label: "Mail reports", icon: Mail },
-  { key: "calendar", label: "Google Calendar", icon: CalendarDays },
-  { key: "gmail", label: "Gmail", icon: Inbox },
-  { key: "drive", label: "Google Drive", icon: HardDrive },
-  { key: "apps", label: "Apps with a personal token", icon: Blocks },
-  { key: "mcp", label: "Connectors", icon: Plug },
+  { key: "web", label: "Web search and reading pages" },
+  { key: "memory", label: "Memory" },
+  { key: "mail", label: "Mail reports" },
+  { key: "calendar", label: "Google Calendar" },
+  { key: "gmail", label: "Gmail" },
+  { key: "drive", label: "Google Drive" },
+  { key: "apps", label: "Apps with a personal token" },
+  { key: "mcp", label: "Connectors" },
 ];
+
+// The feature list: a name and a switch per row, two columns on wider screens.
+function FeatureGrid({ isOn, onSet }) {
+  return (
+    <div className="grid sm:grid-cols-2 sm:gap-x-8">
+      {FEATURE_LABELS.map((f) => (
+        <ToggleRow key={f.key} className="border-t border-border" checked={isOn(f.key)} onCheckedChange={(v) => onSet(f.key, v)} label={t(f.label)} />
+      ))}
+    </div>
+  );
+}
 
 function FeatureSwitches({ user, reload }) {
   async function set(key, value) {
@@ -1167,18 +1183,7 @@ function FeatureSwitches({ user, reload }) {
       toast.error(err.message);
     }
   }
-  return (
-    <div className="divide-y divide-border overflow-hidden rounded-2xl bg-canvas px-4">
-      {FEATURE_LABELS.map((f) => (
-        <div key={f.key} className="flex items-center gap-3 py-3">
-          <f.icon size={18} aria-hidden="true" className="shrink-0 text-fg-muted" />
-          <div className="min-w-0 flex-1">
-            <Switch checked={Boolean(user.features?.[f.key])} onCheckedChange={(v) => set(f.key, v)} label={t(f.label)} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  return <FeatureGrid isOn={(key) => Boolean(user.features?.[key])} onSet={set} />;
 }
 
 function ConnectorsAdmin() {
@@ -1225,40 +1230,47 @@ function ConnectorsAdmin() {
   }
 
   return (
-    <div className="grid gap-6">
-      <p className="text-sm text-fg-muted">
+    <div className="grid gap-8">
+      <p className="max-w-prose text-[13px] text-fg-muted">
         {t("Connectors are MCP servers (Streamable HTTP, https). Their tokens are stored encrypted and never shown again. Users switch them on in their own settings.")}
       </p>
-      {data.connectors.map((c) => (
-        <Card key={c.id} className="grid gap-3 p-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold">{c.name}</span>
-            {c.hasToken && <Badge>{t("Token saved")}</Badge>}
-          </div>
-          <span className="truncate text-sm text-fg-muted">{c.url}</span>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => test(c)}>{t("Test")}</Button>
-            <Button size="sm" variant="ghost" onClick={() => remove(c)}>{t("Remove")}</Button>
-          </div>
-        </Card>
-      ))}
-      {!data.connectors.length && <Card className="px-5 py-6 text-center text-fg-muted">{t("No connectors yet.")}</Card>}
+      <Section>
+        {data.connectors.length > 0 && (
+          <Rows>
+            {data.connectors.map((c) => (
+              <div key={c.id} className="flex min-h-14 items-center justify-between gap-4 py-2.5">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[14px] font-medium">{c.name}</span>
+                    {c.hasToken && <Badge>{t("Token saved")}</Badge>}
+                  </div>
+                  <div className="truncate font-mono text-[12px] text-fg-muted">{c.url}</div>
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <Button size="sm" className="max-sm:h-11" onClick={() => test(c)}>{t("Test")}</Button>
+                  <Button size="sm" variant="ghost" className="max-sm:h-11" onClick={() => remove(c)}>{t("Remove")}</Button>
+                </div>
+              </div>
+            ))}
+          </Rows>
+        )}
+        {!data.connectors.length && <p className="py-2 text-[14px] text-fg-subtle">{t("No connectors yet.")}</p>}
+      </Section>
 
-      <Card className="grid gap-4 p-5">
-        <h3 className="font-semibold">{t("Add a connector")}</h3>
-        <form className="grid gap-4 sm:grid-cols-2" onSubmit={add}>
-          <Field label={t("Name")}><Input value={draft.name} maxLength={60} required onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></Field>
-          <Field label={t("Address")} hint={t("https:// (or http:// for localhost)")}>
+      <Section title={t("Add a connector")}>
+        <form className="mt-3 grid gap-4 sm:grid-cols-2" onSubmit={add}>
+          <Field label={t("Name")} className="min-w-0"><Input value={draft.name} maxLength={60} required onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></Field>
+          <Field label={t("Address")} hint={t("https:// (or http:// for localhost)")} className="min-w-0">
             <Input type="url" value={draft.url} required onChange={(e) => setDraft({ ...draft, url: e.target.value })} />
           </Field>
-          <Field label={t("Access token")} hint={t("Optional. Stored encrypted.")}>
+          <Field label={t("Access token")} hint={t("Optional. Stored encrypted.")} className="min-w-0">
             <Input type="password" autoComplete="off" value={draft.token} onChange={(e) => setDraft({ ...draft, token: e.target.value })} />
           </Field>
-          <div className="flex items-end">
-            <Button variant="primary" type="submit" disabled={busy}>{t("Add connector")}</Button>
+          <div className="flex sm:items-end sm:pb-[22px]">
+            <Button variant="primary" type="submit" className="max-sm:h-11" disabled={busy}>{t("Add connector")}</Button>
           </div>
         </form>
-      </Card>
+      </Section>
     </div>
   );
 }
@@ -1291,26 +1303,18 @@ function GeneralAdmin() {
   }
 
   return (
-    <div className="grid gap-5">
-      <Card className="grid gap-4 p-5">
-        <form className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end" onSubmit={save}>
-          <Field label={t("Assistant name")} hint={t("Shown in the app and to the AI.")}>
+    <div className="grid gap-8">
+      <Section>
+        <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={save}>
+          <Field label={t("Assistant name")} hint={t("Shown in the app and to the AI.")} className="sm:w-72">
             <Input value={name} maxLength={40} required onChange={(e) => setName(e.target.value)} />
           </Field>
-          <Button variant="primary" type="submit" disabled={name.trim() === data.assistantName}>{t("Save name")}</Button>
+          <Button variant="primary" type="submit" className="max-sm:h-11 sm:mb-[22px]" disabled={name.trim() === data.assistantName}>{t("Save name")}</Button>
         </form>
-      </Card>
-      <Card className="grid gap-4 p-5">
-        <div>
-          <h3 className="font-semibold">{t("New users start with")}</h3>
-          <p className="mt-1 text-sm text-fg-muted">{t("Existing users keep what you already set for them.")}</p>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {FEATURE_LABELS.map((f) => (
-            <Switch key={f.key} checked={Boolean(data.defaults?.[f.key])} onCheckedChange={(v) => setDefault(f.key, v)} label={t(f.label)} />
-          ))}
-        </div>
-      </Card>
+      </Section>
+      <Section title={t("New users start with")} description={t("Existing users keep what you already set for them.")}>
+        <FeatureGrid isOn={(key) => Boolean(data.defaults?.[key])} onSet={setDefault} />
+      </Section>
     </div>
   );
 }
@@ -1332,32 +1336,29 @@ function UsersAdmin() {
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid gap-8">
       <InvitesAdmin onChanged={reload} />
       {data.users.map((u) => (
-        <section key={u.id} className="grid gap-4 rounded-[20px] bg-raised p-5">
-          <div className="flex items-center gap-3.5">
-            <span className="grid size-11 shrink-0 place-items-center rounded-full bg-canvas text-[16px] font-semibold uppercase">
-              {u.username.slice(0, 1)}
-            </span>
-            <div className="min-w-0 flex-1">
+        <section key={u.id} className="grid gap-5 border-t border-border pt-5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="truncate font-semibold">{u.username}</span>
+                <span className="truncate text-[15px] font-medium">{u.username}</span>
                 {u.isAdmin && <Badge tone="accent">{t("Admin")}</Badge>}
                 {!u.active && <Badge tone="danger">{t("Switched off")}</Badge>}
               </div>
-              <div className="mt-0.5 text-[13px] text-fg-muted tabular-nums">
+              <div className="mt-0.5 font-mono text-[12px] text-fg-muted tabular-nums">
                 {t("{messages} messages · {tokens} tokens today", { messages: u.last24h.messages, tokens: u.last24h.tokens.toLocaleString() })}
               </div>
             </div>
             {!u.isAdmin && (
-              <Button size="sm" onClick={() => run(() => api(`/api/admin/users/${u.id}`, { method: "PATCH", body: { active: !u.active } }), u.active ? t("Account switched off") : t("Account switched on"))}>
+              <Button size="sm" className="shrink-0 max-sm:h-11" onClick={() => run(() => api(`/api/admin/users/${u.id}`, { method: "PATCH", body: { active: !u.active } }), u.active ? t("Account switched off") : t("Account switched on"))}>
                 {u.active ? t("Switch off") : t("Switch on")}
               </Button>
             )}
           </div>
-          <div className="grid gap-2">
-            <span className="px-1 text-[13px] font-medium text-fg-muted">{t("What this user may use")}</span>
+          <div className="grid gap-1">
+            <span className={CAPTION}>{t("What this user may use")}</span>
             <FeatureSwitches user={u} reload={reload} />
           </div>
           <PasswordReset userId={u.id} />
@@ -1411,37 +1412,37 @@ function InvitesAdmin({ onChanged }) {
   }
 
   return (
-    <section className="grid gap-4 rounded-[20px] bg-raised p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h3 className="font-semibold">{t("Invite someone")}</h3>
-          <p className="mt-1 text-sm text-fg-muted">
+    <section className="grid gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+        <div className="min-w-0">
+          <h3 className={CAPTION}>{t("Invite someone")}</h3>
+          <p className="mt-1 max-w-prose text-[13px] leading-snug text-fg-muted">
             {t("They open the link, choose a username and a password, and are signed in. Links work once and expire after 7 days.")}
           </p>
         </div>
-        <span className="text-sm text-fg-muted tabular-nums">{t("{used} of {max} people", { used: data.seats.used, max: data.seats.max })}</span>
+        <span className="font-mono text-[12px] text-fg-muted tabular-nums">{t("{used} of {max} people", { used: data.seats.used, max: data.seats.max })}</span>
       </div>
       {link && (
-        <div className="grid gap-2 rounded-lg border border-border p-3">
-          <span className="text-sm font-medium">{t("Send this link. It is shown only now.")}</span>
+        <div className="grid gap-2 rounded-md border border-border p-3">
+          <span className="text-[13px] text-fg">{t("Send this link. It is shown only now.")}</span>
           <div className="flex gap-2">
             <Input readOnly value={link.url} onFocus={(e) => e.target.select()} aria-label={t("Invite link")} />
-            <Button onClick={copy}>{t("Copy")}</Button>
+            <Button className="shrink-0" onClick={copy}>{t("Copy")}</Button>
           </div>
         </div>
       )}
       {data.invites.length > 0 && (
-        <ul className="divide-y divide-border rounded-lg border border-border">
+        <Rows>
           {data.invites.map((invite) => (
-            <li key={invite.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+            <div key={invite.id} className="flex min-h-11 items-center justify-between gap-3 py-1.5 text-[13px]">
               <span className="text-fg-muted">{t("Open until {date}", { date: new Date(invite.expiresAt).toLocaleDateString(currentLocale()) })}</span>
-              <Button size="sm" variant="ghost" onClick={() => revoke(invite)}>{t("Revoke")}</Button>
-            </li>
+              <Button size="sm" variant="ghost" className="max-sm:h-11" onClick={() => revoke(invite)}>{t("Revoke")}</Button>
+            </div>
           ))}
-        </ul>
+        </Rows>
       )}
       <div>
-        <Button variant="primary" onClick={create} disabled={busy || full}>
+        <Button variant="primary" className="max-sm:h-11" onClick={create} disabled={busy || full}>
           {full ? t("No room left") : t("Create invite link")}
         </Button>
       </div>
@@ -1452,7 +1453,7 @@ function InvitesAdmin({ onChanged }) {
 function PasswordReset({ userId }) {
   const [password, setPassword] = useState("");
   return (
-    <form className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end" onSubmit={async (e) => {
+    <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={async (e) => {
       e.preventDefault();
       try {
         await api(`/api/admin/users/${userId}`, { method: "PATCH", body: { password } });
@@ -1462,10 +1463,10 @@ function PasswordReset({ userId }) {
         toast.error(err.message);
       }
     }}>
-      <Field label={t("New password")} hint={t("Signs the user out everywhere")}>
+      <Field label={t("New password")} hint={t("Signs the user out everywhere")} className="sm:w-72">
         <Input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} />
       </Field>
-      <Button type="submit" disabled={password.length < 8}>{t("Set password")}</Button>
+      <Button type="submit" className="max-sm:h-11 sm:mb-[22px]" disabled={password.length < 8}>{t("Set password")}</Button>
     </form>
   );
 }
@@ -1530,20 +1531,20 @@ function AiKeyCard({ keySource, onChanged }) {
     : t("Not set yet");
 
   return (
-    <div className="rounded-[20px] border border-border bg-raised px-5 [&>section]:border-b-0 [&>section]:py-5">
-    <Section icon={KeyRound} title={t("Hack Club AI key")} description={t("Stored encrypted on the server. It is never shown again after saving.")}>
-      <SettingRow label={t("Status")} description={status} />
-      <form className="grid gap-3" onSubmit={save}>
+    <Section title={t("Hack Club AI key")} description={t("Stored encrypted on the server. It is never shown again after saving.")}>
+      <Rows>
+        <SettingRow label={t("Status")} description={status} />
+      </Rows>
+      <form className="mt-3 grid max-w-md gap-3" onSubmit={save}>
         <Field label={t("New key")}>
           <Input type="password" autoComplete="off" value={key} onChange={(e) => setKey(e.target.value)} />
         </Field>
-        <div className="flex flex-wrap justify-end gap-2">
-          {keySource === "app" && <Button type="button" variant="danger" onClick={remove}>{t("Remove key")}</Button>}
-          <Button type="submit" variant="primary" disabled={busy || key.trim().length < 10}>{t("Save key")}</Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" variant="primary" className="max-sm:h-11" disabled={busy || key.trim().length < 10}>{t("Save key")}</Button>
+          {keySource === "app" && <Button type="button" variant="danger" className="max-sm:h-11" onClick={remove}>{t("Remove key")}</Button>}
         </div>
       </form>
     </Section>
-    </div>
   );
 }
 
@@ -1581,20 +1582,20 @@ function AiAdmin() {
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-8">
       <AiKeyCard keySource={data.provider.keySource} onChanged={reload} />
-      <Card className="grid gap-3 p-5">
+      <Section>
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-semibold">{data.provider.name}</span>
+          <span className="text-[14px] font-medium">{data.provider.name}</span>
           <Badge tone={data.provider.keySet ? "accent" : "danger"}>
             {data.provider.keySet ? t("Key set") : t("No key yet")}
           </Badge>
         </div>
-        <span className="truncate text-sm text-fg-muted">{data.provider.baseUrl}</span>
-        <p className="text-sm text-fg-muted">
+        <div className="mt-0.5 truncate font-mono text-[12px] text-fg-muted">{data.provider.baseUrl}</div>
+        <p className="mt-2 max-w-prose text-[13px] text-fg-muted">
           {t("The address comes from the server's .env file (HACKCLUB_BASE_URL). The key is saved above and never shown here.")}
         </p>
-      </Card>
+      </Section>
 
       {JOBS.map((job) => (
         <ModelPicker
@@ -1608,8 +1609,8 @@ function AiAdmin() {
         />
       ))}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button variant="primary" onClick={save}>{t("Save models")}</Button>
+      <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+        <Button variant="primary" className="max-sm:h-11" onClick={save}>{t("Save models")}</Button>
       </div>
       <Notice text={message.text} error={message.error} />
     </div>
@@ -1635,13 +1636,10 @@ function ModelPicker({ job, value, voices, formats, onChange, onTest }) {
   }
 
   return (
-    <Card className="grid gap-4 p-5">
-      <div>
-        <h3 className="font-semibold">{t(job.label)}</h3>
-        <p className="mt-1 text-sm text-fg-muted">{t(job.hint)}</p>
-      </div>
+    <Section title={t(job.label)} description={t(job.hint)}>
+     <div className="mt-3 grid gap-4">
       {models.error && <Notice text={models.error} error />}
-      <Field label={t("Search models")}>
+      <Field label={t("Search models")} className="min-w-0">
         <Input value={search} placeholder={t("For example haiku, voxtral or audio")} onChange={(e) => setSearch(e.target.value)} />
       </Field>
       <Switch
@@ -1649,7 +1647,7 @@ function ModelPicker({ job, value, voices, formats, onChange, onTest }) {
         onCheckedChange={setShowAll}
         label={t("Show all models, not only those that fit this job")}
       />
-      <Field label={t("Model")} hint={t("Current: {model}", { model: value.model || "–" })}>
+      <Field label={t("Model")} hint={t("Current: {model}", { model: value.model || "–" })} className="min-w-0">
         <Select value={value.model || ""} onChange={(e) => onChange({ ...value, model: e.target.value })}>
           {shown.map((m) => (
             <option key={m.id} value={m.id}>{m.name === m.id ? m.id : `${m.name} (${m.id})`}</option>
@@ -1657,16 +1655,16 @@ function ModelPicker({ job, value, voices, formats, onChange, onTest }) {
         </Select>
       </Field>
       {list.length > LIMIT && (
-        <p className="text-xs text-fg-subtle">{t("Showing {shown} of {total}. Type more to narrow it down.", { shown: LIMIT, total: list.length })}</p>
+        <p className="text-[12px] text-fg-subtle">{t("Showing {shown} of {total}. Type more to narrow it down.", { shown: LIMIT, total: list.length })}</p>
       )}
       {job.role === "tts" && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t("Voice")}>
+          <Field label={t("Voice")} className="min-w-0">
             <Select value={value.voice || "alloy"} onChange={(e) => onChange({ ...value, voice: e.target.value })}>
               {voices.map((v) => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
             </Select>
           </Field>
-          <Field label={t("Audio format")}>
+          <Field label={t("Audio format")} className="min-w-0">
             <Select value={value.format || "mp3"} onChange={(e) => onChange({ ...value, format: e.target.value })}>
               {formats.map((f) => <option key={f} value={f}>{f}</option>)}
             </Select>
@@ -1674,9 +1672,10 @@ function ModelPicker({ job, value, voices, formats, onChange, onTest }) {
         </div>
       )}
       <div>
-        <Button size="sm" variant="ghost" onClick={onTest}>{t("Test {name}", { name: t(job.label) })}</Button>
+        <Button size="sm" variant="ghost" className="max-sm:h-11" onClick={onTest}>{t("Test {name}", { name: t(job.label) })}</Button>
       </div>
-    </Card>
+     </div>
+    </Section>
   );
 }
 
@@ -1686,32 +1685,32 @@ function UsageAdmin() {
   if (error) return <Notice text={error} error />;
   if (!data) return <Loading />;
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-8">
       <Field label={t("Period")} className="max-w-xs">
         <Select value={days} onChange={(e) => setDays(Number(e.target.value))}>
           {[1, 7, 30, 90].map((d) => <option key={d} value={d}>{t("Last {n} days", { n: d })}</option>)}
         </Select>
       </Field>
-      <Section icon={Users} title={t("By user")}>
-        <Card className="divide-y divide-border">
+      <Section title={t("By user")}>
+        <Rows>
           {data.byUser.map((u) => (
-            <div key={u.username} className="flex items-center justify-between gap-3 px-4 py-3">
-              <span>{u.username}</span>
-              <span className="text-sm text-fg-muted tabular-nums">{t("{calls} calls · {tokens} tokens", { calls: u.calls, tokens: Number(u.tokens).toLocaleString() })}</span>
+            <div key={u.username} className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-0.5 py-2.5">
+              <span className="min-w-0 truncate text-[14px]">{u.username}</span>
+              <span className="font-mono text-[12px] text-fg-muted tabular-nums">{t("{calls} calls · {tokens} tokens", { calls: u.calls, tokens: Number(u.tokens).toLocaleString() })}</span>
             </div>
           ))}
-        </Card>
+        </Rows>
       </Section>
-      <Section icon={Cpu} title={t("By model")}>
-        <Card className="divide-y divide-border">
+      <Section title={t("By model")}>
+        <Rows>
           {data.byModel.map((m) => (
-            <div key={`${m.role}-${m.model}`} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-              <span className="min-w-0 truncate">{t(ROLE_LABEL[m.role] || m.role)}: {m.model}</span>
-              <span className="text-sm text-fg-muted tabular-nums">{t("{calls} calls · {tokens} tokens", { calls: m.calls, tokens: Number((m.prompt_tokens || 0) + (m.completion_tokens || 0)).toLocaleString() })}</span>
+            <div key={`${m.role}-${m.model}`} className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-0.5 py-2.5">
+              <span className="min-w-0 break-words text-[14px]">{t(ROLE_LABEL[m.role] || m.role)}: {m.model}</span>
+              <span className="font-mono text-[12px] text-fg-muted tabular-nums">{t("{calls} calls · {tokens} tokens", { calls: m.calls, tokens: Number((m.prompt_tokens || 0) + (m.completion_tokens || 0)).toLocaleString() })}</span>
             </div>
           ))}
-          {!data.byModel.length && <div className="px-4 py-3 text-fg-muted">{t("No usage in this period.")}</div>}
-        </Card>
+          {!data.byModel.length && <div className="py-2.5 text-[14px] text-fg-subtle">{t("No usage in this period.")}</div>}
+        </Rows>
       </Section>
     </div>
   );

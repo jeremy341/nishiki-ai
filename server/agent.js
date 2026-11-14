@@ -16,7 +16,9 @@ export async function runAgent(messages, ctx) {
     if (budget.used > config.ai.maxTurnTokens) {
       throw new AppError(502, "That answer needed too much work. Ask for a smaller part.");
     }
-    const message = await callModel(working, { role: "chat", userId: ctx.userId, tools: tools.length ? tools : undefined, budget });
+    const message = await callModel(working, { role: "chat", userId: ctx.userId, tools: tools.length ? tools : undefined, budget,
+      onText: ctx.onText,
+      ...(ctx.voice ? { effort: "low", maxTokens: 450 } : {}) });
     const calls = message.tool_calls || [];
 
     if (!calls.length) {
@@ -24,6 +26,8 @@ export async function runAgent(messages, ctx) {
       return message.content;
     }
 
+    // Words said before a tool call are not part of the final answer; the page clears them.
+    ctx.onReset?.();
     working.push({ role: "assistant", content: message.content || null, tool_calls: calls });
     for (const call of calls) {
       const name = call.function?.name || "";

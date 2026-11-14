@@ -39,10 +39,10 @@ export default function CommandPalette({ open, onOpenChange, commands }) {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[var(--scrim)]" />
+        <DialogPrimitive.Overlay className="motion-overlay fixed inset-0 z-50 bg-[var(--scrim)]" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          className="fixed left-1/2 top-[12vh] z-50 w-[min(92vw,560px)] -translate-x-1/2 overflow-hidden rounded-[22px] border border-border bg-[var(--overlay)] shadow-2xl outline-none"
+          className="motion-dialog fixed left-1/2 top-[12vh] z-50 w-[min(92vw,560px)] -translate-x-1/2 overflow-hidden rounded-[22px] border border-border bg-[var(--overlay)] shadow-2xl outline-none"
         >
           <DialogPrimitive.Title className="sr-only">{t("Command palette")}</DialogPrimitive.Title>
           <input

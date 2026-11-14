@@ -17,7 +17,7 @@ import { AppError } from "./errors.js";
 // by "regenerate", and by scheduled tasks. The history comes from the database, so the caller must
 // have stored the user's message already (and linked its files) before calling this.
 
-export const SYSTEM_PROMPT = (name, now) => `You are ${name}, a warm, relaxed personal assistant for one person, and you talk like a friend who is good at helping. Now: ${now}.
+export const SYSTEM_PROMPT = (name) => `You are ${name}, a warm, relaxed personal assistant for one person, and you talk like a friend who is good at helping.
 - Write in the language of the user's message. If they write German, answer in German, always. Never answer German in English.
 - Talk naturally, like a real conversation: react to what they said, ask a short follow-up question when it helps, and keep chatting in a relaxed tone. Use short sentences. Skip lists and headings unless the user asks for them.
 - When they ask for something concrete, give the answer clearly and fully. Do not pad it.
@@ -56,9 +56,10 @@ function uniqueSources(list) {
 
 // Writes the assistant's answer to the conversation and returns its id and any proposed actions.
 // titleMessage: the first message of a new chat, which gives the chat its title.
-export async function answerConversation({ userId, conversationId, useCalendar = false, titleMessage = null, attachmentNames = [], userMessageId = null }) {
+export async function answerConversation({ userId, conversationId, useCalendar = false, titleMessage = null, attachmentNames = [], userMessageId = null, voice = false, onText = null, onReset = null }) {
   const googleConnected = googleStatus(userId).connected;
-  const system = [{ role: "system", content: SYSTEM_PROMPT(assistantName(), localNow()) }];
+  // The start of the prompt never changes, so the provider can reuse it between requests (cheaper and faster).
+  const system = [{ role: "system", content: SYSTEM_PROMPT(assistantName()) }];
   const prefs = getPrefs(userId);
   const features = getFeatures(userId);
   if (prefs.customInstructions.trim()) {
@@ -109,7 +110,7 @@ export async function answerConversation({ userId, conversationId, useCalendar =
   const connectors = features.mcp ? await connectorSpecs(userId) : { specs: [], map: new Map() };
   const ctx = {
     userId, conversationId, googleConnected, attachmentIds: [], actionIds: [], sources: [],
-    exaAvailable: exaAvailable(), mailReady: mailConsented(userId), widgets: [], activity: [],
+    exaAvailable: exaAvailable(), mailReady: mailConsented(userId), widgets: [], activity: [], voice, onText, onReset,
     allow: {
       web: features.web && prefs.webSearch,
       memory: features.memory && prefs.memory,
@@ -121,6 +122,13 @@ export async function answerConversation({ userId, conversationId, useCalendar =
     connectorMap: connectors.map,
     enabledApps: usableAppIds(userId),
   };
+  // The clock goes last: a changing value early in the prompt would stop the provider from reusing it.
+  if (voice) {
+    system.push({ role: "system", content: "This is a spoken conversation. Your answer will be read aloud: one to three short, natural sentences, no lists, no markdown, no emoji." });
+  }
+  system.push({ role: "system", content: `Now: ${localNow()}.` });
+  ctx.routeText = db.prepare("SELECT content FROM messages WHERE conversation_id = ? AND role = 'user' ORDER BY id DESC LIMIT 2")
+    .all(conversationId).map((row) => row.content).join("\n");
   const reply = await runAgent(await buildModelInput(conversationId, userId, system), ctx);
 
   const sources = uniqueSources(ctx.sources);

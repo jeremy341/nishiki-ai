@@ -42,20 +42,20 @@ export default function Invite({ token }) {
 
   return (
     <main className="grid min-h-dvh place-items-center px-5 py-10">
-      <div className="grid w-full max-w-sm justify-items-center gap-6">
-        <OrbView status="idle" size={104} decorative />
+      <div className="grid w-full max-w-sm gap-6">
+        <OrbView status="idle" size={64} decorative />
         {!info && <Loading />}
         {info && !info.valid && (
-          <div className="grid gap-3 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight">{t("This invite is no longer valid")}</h1>
-            <p className="text-fg-muted">{t("Ask the person who invited you for a new link.")}</p>
+          <div className="grid gap-2">
+            <h1 className="text-xl font-semibold tracking-tight">{t("This invite is no longer valid")}</h1>
+            <p className="text-sm text-fg-muted">{t("Ask the person who invited you for a new link.")}</p>
           </div>
         )}
         {info?.valid && (
           <>
-            <div className="text-center">
-              <h1 className="text-2xl font-semibold tracking-tight">{t("You are invited to {name}", { name: info.assistantName })}</h1>
-              <p className="mt-1 text-fg-muted">{t("Choose a username and a password. You will be signed in right away.")}</p>
+            <div>
+              <h1 className="text-xl font-semibold tracking-tight">{t("You are invited to {name}", { name: info.assistantName })}</h1>
+              <p className="mt-1 text-sm text-fg-muted">{t("Choose a username and a password. You will be signed in right away.")}</p>
             </div>
             <form onSubmit={submit} className="grid w-full gap-4">
               <Field label={t("Username")} hint={t("2–20 letters, digits, - or _")}>
@@ -70,8 +70,8 @@ export default function Invite({ token }) {
                 <Input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
                   autoComplete="new-password" required minLength={8} maxLength={200} />
               </Field>
-              {error && <p role="alert" className="rounded-xl bg-danger-soft px-4 py-2.5 text-sm text-danger">{error}</p>}
-              <Button variant="primary" size="lg" type="submit" disabled={busy} className="w-full">
+              {error && <p role="alert" className="rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
+              <Button variant="primary" size="md" type="submit" disabled={busy} className="w-full max-md:h-11">
                 {busy ? t("Creating your account…") : t("Create account")}
               </Button>
             </form>

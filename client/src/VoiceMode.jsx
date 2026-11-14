@@ -212,9 +212,9 @@ export default function VoiceMode({ onClose, ask, speak }) {
       className="fixed inset-0 z-[60] flex flex-col bg-canvas pb-[max(20px,env(safe-area-inset-bottom))] pt-[max(8px,env(safe-area-inset-top))] animate-enter"
     >
       <header className="flex items-center justify-between px-4">
-        <span className="pl-2 text-xs font-medium uppercase tracking-[0.16em] text-fg-muted" aria-live="polite">{label && t(label)}</span>
-        <IconButton label={t("End conversation")} onClick={() => { stopAll(); onClose(); }}>
-          <X size={22} aria-hidden="true" />
+        <span className="pl-2 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle" aria-live="polite">{label && t(label)}</span>
+        <IconButton label={t("End conversation")} onClick={() => { stopAll(); onClose(); }} className="size-11">
+          <X size={20} aria-hidden="true" />
         </IconButton>
       </header>
 

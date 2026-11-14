@@ -13,7 +13,7 @@ function RecordingBar({ levels, transcribing, onCancel, onStop, onSend }) {
   const padded = Array.from({ length: BARS }, (_, i) => levels[levels.length - BARS + i] ?? 0);
   return (
     <div className="flex items-center gap-2 px-2 py-2">
-      <IconButton label={t("Cancel recording")} onClick={onCancel} className="size-11 !rounded-full bg-raised">
+      <IconButton label={t("Cancel recording")} onClick={onCancel} className="size-11 bg-raised">
         <X size={18} aria-hidden="true" />
       </IconButton>
       <div className="flex h-10 min-w-0 flex-1 items-center justify-center gap-[3px] overflow-hidden" aria-hidden="true">
@@ -22,19 +22,19 @@ function RecordingBar({ levels, transcribing, onCancel, onStop, onSend }) {
         ) : padded.map((level, i) => (
           <span
             key={i}
-            className="w-[2px] shrink-0 rounded-full bg-fg-muted transition-[height] duration-100"
+            className="w-[2px] shrink-0 rounded-[1px] bg-fg-muted transition-[height] duration-100"
             style={{ height: `${Math.max(2, Math.round(level * 34))}px`, opacity: i < BARS - levels.length ? 0.25 : 1 }}
           />
         ))}
       </div>
-      <IconButton label={t("Stop and keep the text")} onClick={onStop} disabled={transcribing} className="size-11 !rounded-full bg-raised">
-        <Square size={14} aria-hidden="true" fill="currentColor" />
+      <IconButton label={t("Stop and keep the text")} onClick={onStop} disabled={transcribing} className="size-11 bg-raised">
+        <Square size={13} aria-hidden="true" fill="currentColor" />
       </IconButton>
       <IconButton
         label={t("Send recording")}
         onClick={onSend}
         disabled={transcribing}
-        className="size-11 !rounded-full bg-accent text-accent-fg hover:bg-accent hover:opacity-85 hover:text-accent-fg"
+        className="size-11 !bg-accent !text-accent-fg hover:opacity-85"
       >
         <ArrowUp size={18} aria-hidden="true" />
       </IconButton>
@@ -51,7 +51,6 @@ export default function Composer({
   levels, onCancelRecording, onStopRecording, onSendRecording,
   calendarOn, useCalendar, onToggleCalendar,
   reasoning, onReasoning,
-  model,
 }) {
   const ref = useRef(null);
   const attachFull = files.length >= MAX_FILES;
@@ -77,7 +76,7 @@ export default function Composer({
       className="mx-auto w-full max-w-3xl"
       onSubmit={(event) => { event.preventDefault(); onSend(); }}
     >
-      <div className="rounded-[26px] border border-border bg-surface transition-colors focus-within:border-border-strong">
+      <div className="rounded-xl border border-border bg-surface transition-colors focus-within:border-fg-subtle">
         {voiceActive && (
           <RecordingBar
             levels={levels}
@@ -93,13 +92,13 @@ export default function Composer({
             {files.map((f) => (
               <li
                 key={f.localId}
-                className={`relative flex w-40 shrink-0 items-center gap-2 rounded-md border p-1.5 text-xs ${
+                className={`relative flex w-40 shrink-0 items-center gap-2 rounded-md border bg-raised p-1.5 text-xs ${
                   f.status === "error" ? "border-danger/50" : "border-border"
                 }`}
               >
                 {f.previewUrl
                   ? <img src={f.previewUrl} alt="" className="size-9 rounded object-cover" />
-                  : <span className="grid size-9 place-items-center rounded bg-raised"><FileText size={15} aria-hidden="true" /></span>}
+                  : <span className="grid size-9 place-items-center rounded border border-border bg-surface"><FileText size={15} aria-hidden="true" /></span>}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px]">{f.name}</span>
                   <span className={f.status === "error" ? "text-danger" : "text-fg-subtle"}>
@@ -110,7 +109,7 @@ export default function Composer({
                   type="button"
                   aria-label={t("Remove {name}", { name: f.name })}
                   onClick={() => onRemoveFile(f.localId)}
-                  className="relative grid size-7 shrink-0 place-items-center rounded-full text-fg-subtle hover:bg-raised hover:text-fg after:absolute after:-inset-2 after:content-['']"
+                  className="relative grid size-7 shrink-0 place-items-center rounded-md text-fg-subtle hover:bg-raised hover:text-fg after:absolute after:-inset-2 after:content-['']"
                 >
                   <X size={14} aria-hidden="true" />
                 </button>
@@ -129,12 +128,12 @@ export default function Composer({
             rows={1}
             maxLength={4000}
             aria-label={t("Message")}
-            className="block max-h-[200px] min-h-12 w-full resize-none bg-transparent px-3.5 pb-1 pt-3 text-base leading-6 placeholder:text-fg-subtle focus:outline-none md:text-[15px]"
+            className="block max-h-[200px] min-h-12 w-full resize-none border-0 bg-transparent px-3.5 pb-1 pt-3 text-base leading-6 placeholder:text-fg-subtle focus:outline-none md:text-[15px]"
           />
         )}
 
         {!voiceActive && (
-          <div className="flex items-center gap-0.5 px-1.5 pb-1.5">
+          <div className="flex items-center gap-0.5 px-1.5 pb-1.5 md:gap-1">
             {/* Same choices as the iOS attach sheet: camera, photo library, Files. */}
             <Menu
               align="start"
@@ -143,9 +142,9 @@ export default function Composer({
                   type="button"
                   aria-label={t("Add a photo or file")}
                   disabled={busy || attachFull}
-                  className="grid size-11 place-items-center rounded-full text-fg-muted transition-colors hover:bg-raised hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-fg/20 disabled:opacity-40"
+                  className="grid size-11 place-items-center rounded-md text-fg-muted transition-colors hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg disabled:opacity-40 md:size-9"
                 >
-                  <Plus size={19} aria-hidden="true" />
+                  <Plus size={18} aria-hidden="true" />
                 </button>
               )}
             >
@@ -159,19 +158,19 @@ export default function Composer({
                 active={useCalendar}
                 onClick={onToggleCalendar}
                 aria-pressed={useCalendar}
-                className="size-11 text-[12px] font-medium"
+                className="size-11 font-mono text-[12px] font-medium md:size-9"
               >
                 {t("Cal")}
               </IconButton>
             )}
-            <IconButton label={t("Dictate")} onClick={onMic} className="size-11">
-              <Mic size={17} aria-hidden="true" />
+            <IconButton label={t("Dictate")} onClick={onMic} className="size-11 md:size-9">
+              <Mic size={16} aria-hidden="true" />
             </IconButton>
             <Thinking value={reasoning} onChange={onReasoning} />
             <div className="ml-auto flex items-center gap-1">
               {!canSend && (
-                <IconButton label={t("Conversation mode")} onClick={onTalk} className="size-11">
-                  <AudioLines size={17} aria-hidden="true" />
+                <IconButton label={t("Conversation mode")} onClick={onTalk} className="size-11 md:size-9">
+                  <AudioLines size={16} aria-hidden="true" />
                 </IconButton>
               )}
               {canSend && (
@@ -179,18 +178,17 @@ export default function Composer({
                   label={busy ? t("Sending") : t("Send")}
                   type="submit"
                   disabled={busy || !canSend}
-                  className="size-11 bg-accent text-accent-fg hover:bg-accent hover:opacity-85 hover:text-accent-fg"
+                  className="size-11 !bg-accent !text-accent-fg hover:opacity-85 disabled:opacity-40 md:size-9"
                 >
-                  <ArrowUp size={17} aria-hidden="true" />
+                  <ArrowUp size={16} aria-hidden="true" />
                 </IconButton>
               )}
             </div>
           </div>
         )}
       </div>
-      <div className="mt-2 flex items-center justify-between px-1 font-mono text-[11px] text-fg-subtle">
-        <span className="truncate">{model || t("No AI model set up yet")}</span>
-        <span className="hidden md:inline">{t("Enter to send · Shift+Enter for a new line")}</span>
+      <div className="mt-1.5 hidden justify-end px-1 font-mono text-[11px] text-fg-subtle md:flex">
+        <span>{t("Enter to send · Shift+Enter for a new line")}</span>
       </div>
     </form>
   );

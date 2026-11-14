@@ -19,13 +19,13 @@ export function ChartContainer({ config, className = "", children }) {
 export function ChartTooltipContent({ active, payload, label, config = {}, hideLabel = false }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="grid min-w-[8rem] gap-1.5 rounded-xl border border-border bg-overlay px-3 py-2 text-xs text-fg shadow-xl">
+    <div className="grid min-w-[8rem] gap-1.5 rounded-lg border border-border bg-overlay px-3 py-2 text-xs text-fg shadow-md">
       {!hideLabel && label !== undefined && <div className="font-medium">{label}</div>}
       {payload.map((item) => {
         const entry = config[item.dataKey] || config[item.name] || {};
         return (
           <div key={item.dataKey ?? item.name} className="flex items-center gap-2">
-            <span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: item.color || item.payload?.fill }} aria-hidden="true" />
+            <span className="size-2 shrink-0 rounded-[2px]" style={{ background: item.color || item.payload?.fill }} aria-hidden="true" />
             <span className="text-fg-muted">{entry.label ?? item.name}</span>
             <span className="ml-auto font-mono tabular-nums">{item.value}</span>
           </div>
@@ -44,7 +44,7 @@ export function ChartLegendContent({ payload = [], config = {} }) {
         const entry = config[item.dataKey] || config[item.value] || {};
         return (
           <span key={item.value} className="flex items-center gap-1.5">
-            <span className="size-2.5 shrink-0 rounded-[2px]" style={{ background: entry.color || item.color }} aria-hidden="true" />
+            <span className="size-2 shrink-0 rounded-[2px]" style={{ background: entry.color || item.color }} aria-hidden="true" />
             {entry.label ?? item.value}
           </span>
         );

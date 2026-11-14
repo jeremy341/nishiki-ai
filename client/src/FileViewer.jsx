@@ -1,5 +1,5 @@
 import Loading from "./ui/Loading.jsx";
-import { Download, FileDown, Sparkles, X } from "lucide-react";
+import { Download, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { api } from "./api.js";
@@ -47,7 +47,7 @@ function PdfPages({ id }) {
           canvas.height = Math.floor(viewport.height);
           canvas.style.width = `${width}px`;
           canvas.style.height = "auto";
-          canvas.className = "mx-auto mb-3 block max-w-full rounded-md bg-white shadow-sm";
+          canvas.className = "mx-auto mb-3 block max-w-full rounded-md border border-border bg-white";
           canvas.setAttribute("aria-label", t("Page {n}", { n }));
           node?.appendChild(canvas);
           await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
@@ -124,7 +124,7 @@ function SlideCards({ text }) {
         <section
           key={i}
           aria-label={t("Slide {n}", { n: i + 1 })}
-          className="grid aspect-video content-start gap-2 overflow-hidden rounded-xl bg-white p-6 text-neutral-900 shadow-sm"
+          className="grid aspect-video content-start gap-2 overflow-hidden rounded-lg border border-border bg-white p-6 text-neutral-900"
         >
           <span className="text-[11px] font-medium text-neutral-500">{i + 1}</span>
           {lines.length > 0 && <p className="text-lg font-semibold leading-snug break-words">{lines[0]}</p>}
@@ -270,30 +270,30 @@ export default function FileViewer({ file, onClose, onConverted, onSummarized, w
         />
       )}
       <header className="flex h-12 shrink-0 items-center gap-1 border-b border-border px-2">
-        <IconButton label={t("Close")} onClick={onClose} className="size-10 !rounded-full bg-raised">
+        <IconButton label={t("Close")} onClick={onClose} className="size-11 md:size-9">
           <X size={18} aria-hidden="true" />
         </IconButton>
-        <span className="min-w-0 flex-1 truncate px-1 text-sm font-medium">{file.name}</span>
+        <span className="min-w-0 flex-1 truncate px-1 text-sm">{file.name}</span>
         {canSummarise && (
-          <Button size="sm" onClick={summarise} disabled={converting}>
-            <Sparkles size={14} aria-hidden="true" /> {t("Summarise")}
+          <Button size="sm" onClick={summarise} disabled={converting} className="max-md:h-11">
+            {t("Summarise")}
           </Button>
         )}
         {isWord && (
-          <Button size="sm" onClick={saveAsPdf} disabled={converting}>
-            <FileDown size={14} aria-hidden="true" /> {t("Save as PDF")}
+          <Button size="sm" onClick={saveAsPdf} disabled={converting} className="max-md:h-11">
+            {t("Save as PDF")}
           </Button>
         )}
         <a
           href={`/api/attachments/${file.id}`}
           download={file.name}
           aria-label={t("Download")}
-          className="grid size-10 place-items-center rounded-full text-fg-muted hover:bg-raised hover:text-fg"
+          className="grid size-11 shrink-0 place-items-center rounded-md text-fg-muted hover:bg-raised hover:text-fg md:size-9"
         >
           <Download size={18} aria-hidden="true" />
         </a>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto bg-raised/30">
+      <div className="min-h-0 flex-1 overflow-y-auto bg-surface">
         {isImage && (
           <div className="grid min-h-full place-items-center p-3">
             <img src={`/api/attachments/${file.id}`} alt={file.name} className="max-h-full max-w-full rounded-md" />

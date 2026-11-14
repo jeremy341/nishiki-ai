@@ -64,10 +64,10 @@
     --danger-soft: rgb(180 35 24 / 0.08);
     --success: #15803d;
     --scrim: rgb(20 20 24 / 0.35);
-  --ios-blue: #007aff;
-  --glass: rgb(120 120 128 / 0.16);
-  --glass-stroke: rgb(0 0 0 / 0.06);
-  --tick: rgb(0 0 0 / 0.18);
+    --ios-blue: #007aff;
+    --glass: rgb(120 120 128 / 0.16);
+    --glass-stroke: rgb(0 0 0 / 0.06);
+    --tick: rgb(0 0 0 / 0.18);
     color-scheme: light;
   }
 }
@@ -93,6 +93,14 @@
   --glass-stroke: rgb(0 0 0 / 0.06);
   --tick: rgb(0 0 0 / 0.18);
   color-scheme: light;
+}
+
+/* Type scale (named, so a size is a decision and not a number): caption 12, label 13, body 14 or 15,
+   title 16, heading 20. Spacing rhythm is Tailwind's 4px grid: 8 inside controls, 12 between related
+   things, 16 to 20 inside panels, 24 between blocks. Controls are 36px tall, 44px on touch. */
+:root {
+  --control-h: 36px;
+  --control-h-touch: 44px;
 }
 
 /* Chart colours: readable on both themes */
@@ -128,10 +136,19 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.125rem;
+  --text-title: 1rem;
+  --text-title--line-height: 1.5rem;
+  --text-heading: 1.25rem;
+  --text-heading--line-height: 1.75rem;
+
   --radius-card: 8px;
   --radius-field: 6px;
 
-  --animate-enter: enter 180ms ease-out;
+  --animate-enter: egg-enter var(--dur-enter) var(--ease-snappy) backwards;
   --animate-pulse-soft: pulse-soft 1.6s ease-in-out infinite;
 
   @keyframes enter {
@@ -157,8 +174,10 @@
     color: var(--fg);
     font-family: var(--font-sans);
     font-size: 15px;
-    line-height: 1.6;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     overflow: hidden;
   }
@@ -185,21 +204,21 @@
     opacity: 0.45;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.001ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.001ms !important;
-      scroll-behavior: auto !important;
-    }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--fg) 22%, transparent);
   }
 }
 
 /* Markdown inside answers */
 .prose-answer {
   overflow-wrap: anywhere;
+  line-height: 1.6;
 }
 .prose-answer > :first-child { margin-top: 0; }
 .prose-answer > :last-child { margin-bottom: 0; }
@@ -241,7 +260,84 @@
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
     scroll-behavior: auto !important;
   }
 }
+
+/* ------------------------------------------------------------------------------------------------ */
+/* Motion, taken from the Egg project (docs/design/ui-spec.md, section 3).                           */
+/* One easing for almost everything, short durations, nothing bounces. Radix sets data-state on      */
+/* dialogs, menus and sheets, so they get an entrance and an exit. Reduced motion (above) turns all  */
+/* of it into an instant change.                                                                      */
+/* ------------------------------------------------------------------------------------------------ */
+
+:root {
+  --ease-snappy: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-press: 100ms; /* a button pressed in */
+  --dur-fast: 150ms; /* hover colour, menu open */
+  --dur-base: 200ms; /* dialog open, toggles */
+  --dur-enter: 220ms; /* a message or a page arriving */
+  --dur-slow: 280ms; /* sheets */
+  --stagger-step: 35ms;
+}
+
+@keyframes egg-enter { from { opacity: 0; transform: translateY(4px); } }
+@keyframes egg-enter-up { from { opacity: 0; transform: translateY(8px); } }
+@keyframes egg-fade-in { from { opacity: 0; } }
+@keyframes egg-fade-out { to { opacity: 0; } }
+@keyframes egg-pop-in { from { opacity: 0; transform: scale(0.97); } }
+@keyframes egg-pop-out { to { opacity: 0; transform: scale(0.98); } }
+@keyframes egg-sheet-in { from { transform: translateY(100%); } }
+@keyframes egg-sheet-out { to { transform: translateY(100%); } }
+@keyframes egg-menu-in { from { opacity: 0; transform: scale(0.96); } }
+@keyframes egg-swap-in { from { opacity: 0; transform: translateY(3px); filter: blur(2px); } }
+
+/* A message, a page or a block arriving: a 4px rise and a fade. */
+.motion-enter { animation: egg-enter var(--dur-enter) var(--ease-snappy) backwards; }
+.motion-fade { animation: egg-fade-in var(--dur-base) var(--ease-snappy) backwards; }
+/* A value that just changed settles in (the thinking level, a counter). */
+.motion-swap { animation: egg-swap-in 180ms var(--ease-snappy); }
+/* Children rise one after the other (at most 8 steps). */
+.motion-stagger > * { animation: egg-enter-up var(--dur-slow) var(--ease-snappy) backwards; animation-delay: calc(var(--i, 8) * var(--stagger-step)); }
+.motion-stagger > :nth-child(1) { --i: 0; }
+.motion-stagger > :nth-child(2) { --i: 1; }
+.motion-stagger > :nth-child(3) { --i: 2; }
+.motion-stagger > :nth-child(4) { --i: 3; }
+.motion-stagger > :nth-child(5) { --i: 4; }
+.motion-stagger > :nth-child(6) { --i: 5; }
+.motion-stagger > :nth-child(7) { --i: 6; }
+.motion-stagger > :nth-child(8) { --i: 7; }
+
+/* Dimmed backdrop behind a dialog or sheet. */
+.motion-overlay[data-state="open"] { animation: egg-fade-in var(--dur-fast) var(--ease-snappy); }
+.motion-overlay[data-state="closed"] { animation: egg-fade-out 120ms var(--ease-snappy) forwards; }
+
+/* A centred dialog: fades in from 97% size, fades out a little faster. */
+.motion-dialog[data-state="open"] { animation: egg-pop-in var(--dur-base) var(--ease-snappy); }
+.motion-dialog[data-state="closed"] { animation: egg-pop-out 120ms var(--ease-snappy) forwards; }
+
+/* A panel that is a sheet from the bottom on phones and a dialog on wide screens. */
+.motion-sheet[data-state="open"] { animation: egg-sheet-in var(--dur-slow) var(--ease-sheet); }
+.motion-sheet[data-state="closed"] { animation: egg-sheet-out 220ms var(--ease-sheet) forwards; }
+@media (min-width: 768px) {
+  .motion-sheet[data-state="open"] { animation: egg-pop-in var(--dur-base) var(--ease-snappy); }
+  .motion-sheet[data-state="closed"] { animation: egg-pop-out 120ms var(--ease-snappy) forwards; }
+}
+
+/* A menu grows out of its button. */
+.motion-menu[data-state="open"] {
+  transform-origin: var(--radix-dropdown-menu-content-transform-origin);
+  animation: egg-menu-in var(--dur-fast) var(--ease-snappy);
+}
+.motion-menu[data-state="closed"] { animation: egg-fade-out 100ms var(--ease-snappy) forwards; }
+
+/* Buttons sink a little while pressed. */
+.pressable { transition-property: color, background-color, border-color, transform, opacity; transition-duration: var(--dur-fast); transition-timing-function: var(--ease-snappy); }
+.pressable:active:not(:disabled):not([aria-disabled="true"]) { transform: scale(0.97); transition-duration: var(--dur-press); }
+
+.motion-sheet-bottom[data-state="open"] { animation: egg-sheet-in var(--dur-slow) var(--ease-sheet); }
+.motion-sheet-bottom[data-state="closed"] { animation: egg-sheet-out 220ms var(--ease-sheet) forwards; }

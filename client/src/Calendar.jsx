@@ -1,10 +1,9 @@
 import Loading from "./ui/Loading.jsx";
 import { currentLocale, t } from "./i18n/index.js";
-import { CalendarDays } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "./api.js";
-import { Button, Card, Field, FullPage, Input } from "./ui/ui.jsx";
+import { Button, Field, FullPage, Input } from "./ui/ui.jsx";
 
 const TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -101,49 +100,48 @@ export default function CalendarPanel({ open, onOpenChange, google, onChanged })
   return (
     <FullPage title={t("Calendar")} onClose={() => onOpenChange(false)}>
       {!connected && (
-        <div className="grid gap-4 py-4 text-center">
-          <CalendarDays size={40} aria-hidden="true" className="mx-auto text-fg-muted" />
-          <p className="text-fg-muted">            {t("Connect your Google account. The app only asks to view and create calendar events. It never sees your password.")}          </p>
+        <div className="grid justify-items-start gap-4 py-2">
+          <p className="max-w-[48ch] text-sm text-fg-muted">{t("Connect your Google account. The app only asks to view and create calendar events. It never sees your password.")}</p>
           <div>
-            <Button variant="primary" onClick={() => { window.location.href = "/api/google/connect"; }}>{t("Connect Google Calendar")}</Button>
+            <Button variant="primary" className="max-md:h-11" onClick={() => { window.location.href = "/api/google/connect"; }}>{t("Connect Google Calendar")}</Button>
           </div>
         </div>
       )}
 
       {connected && (
-        <div className="grid gap-7">
+        <div className="grid gap-8">
           <section className="grid gap-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold">{t("Next 7 days")}</h3>
-              <Button variant="ghost" size="sm" onClick={disconnect} disabled={busy}>{t("Disconnect")}</Button>
+              <h3 className="font-mono text-[11px] uppercase tracking-wider text-fg-subtle">{t("Next 7 days")}</h3>
+              <Button variant="ghost" size="sm" className="max-md:h-11" onClick={disconnect} disabled={busy}>{t("Disconnect")}</Button>
             </div>
             {events === null && !error && <Loading />}
-            {events && events.length === 0 && <p className="text-fg-muted">{t("Nothing scheduled.")}</p>}
+            {events && events.length === 0 && <p className="text-sm text-fg-muted">{t("Nothing scheduled.")}</p>}
             {events && events.length > 0 && (
-              <Card className="divide-y divide-border">
-                {events.map((ev) => (
-                  <div key={ev.id} className="grid gap-0.5 px-4 py-3">
-                    <span className="text-xs text-fg-muted">{formatWhen(ev.start, ev.allDay)}</span>
-                    <span className="truncate">{ev.title}</span>
-                  </div>
+              <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+                {events.map((ev, i) => (
+                  <li key={ev.id} className="grid gap-0.5 px-4 py-3">
+                    <span className={`font-mono text-[11px] tabular-nums ${i === 0 ? "text-accent" : "text-fg-subtle"}`}>{formatWhen(ev.start, ev.allDay)}</span>
+                    <span className="truncate text-sm">{ev.title}</span>
+                  </li>
                 ))}
-              </Card>
+              </ul>
             )}
           </section>
 
           <section className="grid gap-3">
-            <h3 className="text-sm font-semibold">{t("Add an event")}</h3>
+            <h3 className="font-mono text-[11px] uppercase tracking-wider text-fg-subtle">{t("Add an event")}</h3>
             <form className="flex flex-col gap-2 sm:flex-row" onSubmit={propose}>
               <Field label={t("Describe the event")} className="flex-1">
                 <Input value={text} onChange={(e) => setText(e.target.value)} maxLength={1000} placeholder={t("Coffee with Sam tomorrow at 10")} />
               </Field>
               <div className="sm:self-end">
-                <Button type="submit" disabled={busy || !text.trim()}>{t("Suggest")}</Button>
+                <Button type="submit" className="max-md:h-11" disabled={busy || !text.trim()}>{t("Suggest")}</Button>
               </div>
             </form>
-            {question && <p className="rounded-xl bg-raised px-4 py-2.5 text-sm">{question}</p>}
+            {question && <p className="rounded-md border border-border bg-raised px-3 py-2 text-sm">{question}</p>}
             {proposal && (
-              <Card className="grid gap-4 p-5">
+              <div className="grid gap-4 rounded-lg border border-border p-4">
                 <p className="text-sm text-fg-muted">{t("Check before adding. Nothing is saved yet.")}</p>
                 <Field label={t("Title")}><Input value={proposal.title} maxLength={200} onChange={(e) => setProposal({ ...proposal, title: e.target.value })} /></Field>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -151,16 +149,16 @@ export default function CalendarPanel({ open, onOpenChange, google, onChanged })
                   <Field label={t("End")}><Input type="datetime-local" value={proposal.end} onChange={(e) => setProposal({ ...proposal, end: e.target.value })} /></Field>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="primary" onClick={createEvent} disabled={busy}>{t("Add to Google Calendar")}</Button>
-                  <Button onClick={() => setProposal(null)} disabled={busy}>{t("Discard")}</Button>
+                  <Button variant="primary" className="max-md:h-11" onClick={createEvent} disabled={busy}>{t("Add to Google Calendar")}</Button>
+                  <Button className="max-md:h-11" onClick={() => setProposal(null)} disabled={busy}>{t("Discard")}</Button>
                 </div>
-              </Card>
+              </div>
             )}
           </section>
         </div>
       )}
 
-      {error && <p role="alert" className="mt-4 rounded-xl bg-danger-soft px-4 py-2.5 text-sm text-danger">{error}</p>}
+      {error && <p role="alert" className="mt-4 rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
     </FullPage>
   );
 }

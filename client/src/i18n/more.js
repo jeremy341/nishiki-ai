@@ -327,6 +327,8 @@ Object.assign(de, {
   "Switch off": "Ausschalten",
   "Switch on": "Einschalten",
   "Copy": "Kopieren",
+  "The connection was lost. Open the chat again to see if the answer arrived.": "Die Verbindung ist abgebrochen. Öffne den Chat erneut, um zu sehen, ob die Antwort angekommen ist.",
+  "A little thinking. Fast and cheap. Good for everyday questions and voice.": "Wenig Nachdenken. Schnell und günstig. Gut für Alltagsfragen und Sprache.",
   "Sign in": "Anmelden",
   "Your private assistant": "Dein privater Assistent",
   "tap: cat's paw · hold or right-click: feed the koi": "tippen: Katzenpfote · lange drücken oder rechtsklicken: Koi füttern"

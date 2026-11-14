@@ -28,7 +28,7 @@ export const config = {
     apiKey: env("HACKCLUB_API_KEY"),
     baseUrl: env("HACKCLUB_BASE_URL", "https://ai.hackclub.com/proxy/v1").replace(/\/$/, ""),
     // Claude Haiku 5.5 via Hack Club AI. Confirm ids with GET /proxy/v1/models.
-    model: env("HACKCLUB_MODEL", "openai/gpt-6.1-sol"),
+    model: env("HACKCLUB_MODEL", "anthropic/claude-haiku-5.5"),
     maxTokens: Number(env("AI_MAX_TOKENS", "1500")),
     // How much of a chat is sent to the model per reply (characters, roughly 4 per token).
     // Older parts beyond this are summarized, not dropped.

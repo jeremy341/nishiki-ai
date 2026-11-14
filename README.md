@@ -96,7 +96,7 @@ The assistant calls tools when they help. Read-only tools run at once. Anything 
 
 The user never sees tool calls. Under each answer a short line says what was used (for example "Searched your Gmail"). Tool results stay out of the chat.
 
-Limits per reply: up to 6 tool steps, 8 KB of tool output per step, about 60,000 model tokens in total (`AI_MAX_TURN_TOKENS`). Per request: 60,000 characters of chat history (`HISTORY_CHARS`) and 8 MB of photos and PDFs (`ATTACHMENT_BYTES_PER_REQUEST`). The thinking setting adds room to the answer length, so a long answer is not cut off. Nothing is limited per day per person. Text from web pages and connectors is treated as information, not instructions.
+Limits per reply (the chat model is `anthropic/claude-haiku-5.5` by default; a large model such as GPT-6.1 Sol costs many times more per chat): up to 6 tool steps, 8 KB of tool output per step, about 60,000 model tokens in total (`AI_MAX_TURN_TOKENS`). Per request: 60,000 characters of chat history (`HISTORY_CHARS`) and 8 MB of photos and PDFs (`ATTACHMENT_BYTES_PER_REQUEST`). The thinking setting adds room to the answer length, so a long answer is not cut off. Nothing is limited per day per person. Text from web pages and connectors is treated as information, not instructions.
 
 Confirmations happen in the chat. In conversation mode the orb covers the chat, so close it to tap Confirm.
 
@@ -182,7 +182,9 @@ A connector is an external tool server that speaks the Model Context Protocol ov
 - **Other file types:** Word (.docx), CSV, Markdown, text and JSON files can be attached. The app reads them once at upload, so the assistant can answer questions about them. CSV opens as a table (semicolon or comma), Word and text open as text. The text is kept for the model, not the binary.
 - **Search and export:** the sidebar searches all chats by title and message text. Any chat can be exported as a Markdown file (chat menu, Export as Markdown).
 - **Files:** a photo or PDF opens next to the chat on an iPad or a computer, and full screen on a phone. PDFs are drawn page by page in the browser (pdf.js), so they also show on iPhone and iPad.
-- **Thinking:** the Denkstufe button in the message box (Aus, Niedrig, Mittel, Hoch) sets how much the chat model thinks. It is saved on the account. Low is the default, which keeps voice fast.
+- **Thinking:** the Denkstufe button in the message box (Niedrig, Mittel, Hoch; there is no "off") sets how much the chat model thinks. It is saved on the account. Low is the default, which keeps voice fast.
+- **Streaming:** answers appear word by word while they are written (server-sent events on `POST /api/conversations/:id/messages/stream`). If streaming fails before the first word, the app falls back to the normal request.
+- **Cost:** the tool definitions are the biggest fixed cost (about 3,200 tokens for all 29). Only the tools a message could need are sent (picked by words in the last two messages), so a normal chat message carries about 200 tokens of tool definitions instead of 3,200. The start of the prompt never changes and the clock goes last, so the provider can reuse (cache) it. Voice turns use low thinking and short answers.
 - **Attaching:** the + button offers Take Photo (camera), Photo Library and Choose Files (PDF or image), like the iOS attach sheet.
 - **Account menu (top right):** light or dark mode, read-aloud, calendar, Settings, sign out.
 - **Answers:** Markdown (headings, lists, tables, code with highlighting), sources as chips, and charts or tables the assistant creates. Hover an answer on a computer, or tap the copy button on a phone.

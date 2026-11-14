@@ -1,18 +1,20 @@
-/* Preview of the "koi" look for the whole app. It only applies when the page is opened with ?style=koi
-   (or after that choice was saved in this browser). The standard look stays as it is.
-   Colours are the three waters from ASCII Koi (pond, black, light). */
+/* The koi look. It is always on (style.js sets data-style="koi" on <html>); index.css holds the
+   neutral fallback tokens, this file overrides them with the pond palette.
+   Colours are the three waters from ASCII Koi: pond (the canvas, also the water in the hero and the
+   pond panels), black and light. Layers go canvas, surface, raised, overlay, each a clear step apart.
+   Text contrast on every surface: fg 11:1 or more, fg-muted 6:1 or more, fg-subtle 4.5:1 or more. */
 
 html[data-style="koi"],
 html[data-style="koi"][data-theme="dark"] {
   --canvas: #0e2a32;
-  --surface: #12353f;
-  --raised: #184452;
-  --overlay: #12353f;
-  --border: #224d59;
-  --border-strong: #35707d;
+  --surface: #12343e;
+  --raised: #1a4553;
+  --overlay: #153a46;
+  --border: #2a5663;
+  --border-strong: #41808f;
   --fg: #ebe6dc;
-  --fg-muted: #b9b2a4;
-  --fg-subtle: #7f7a70;
+  --fg-muted: #bdb6a8;
+  --fg-subtle: #a6a094;
   --accent: #e8784f;
   --accent-fg: #1a0f0a;
   --danger: #ff8a7a;
@@ -22,8 +24,8 @@ html[data-style="koi"][data-theme="dark"] {
   --glass: rgb(235 230 220 / 0.12);
   --glass-stroke: rgb(235 230 220 / 0.14);
   --tick: rgb(235 230 220 / 0.32);
-  --radius-card: 18px;
-  --radius-field: 12px;
+  --radius-card: 8px;
+  --radius-field: 6px;
   color-scheme: dark;
 }
 
@@ -31,13 +33,13 @@ html[data-style="koi"][data-theme="dark"] {
   html[data-style="koi"]:not([data-theme="dark"]) {
     --canvas: #e9e4da;
     --surface: #f3efe6;
-    --raised: #ebe5d8;
-    --overlay: #f3efe6;
-    --border: #d9d1bf;
-    --border-strong: #b9ae97;
+    --raised: #e9e3d5;
+    --overlay: #f8f5ee;
+    --border: #d3cab6;
+    --border-strong: #a79c85;
     --fg: #1c1a17;
-    --fg-muted: #5d574d;
-    --fg-subtle: #8d8578;
+    --fg-muted: #4d483f;
+    --fg-subtle: #6f695e;
     --accent: #9e3214;
     --accent-fg: #f7f2e8;
     --danger: #a3261a;
@@ -47,6 +49,8 @@ html[data-style="koi"][data-theme="dark"] {
     --glass: rgb(60 50 30 / 0.1);
     --glass-stroke: rgb(60 50 30 / 0.12);
     --tick: rgb(60 50 30 / 0.22);
+    --radius-card: 8px;
+    --radius-field: 6px;
     color-scheme: light;
   }
 }
@@ -54,13 +58,13 @@ html[data-style="koi"][data-theme="dark"] {
 html[data-style="koi"][data-theme="light"] {
   --canvas: #e9e4da;
   --surface: #f3efe6;
-  --raised: #ebe5d8;
-  --overlay: #f3efe6;
-  --border: #d9d1bf;
-  --border-strong: #b9ae97;
+  --raised: #e9e3d5;
+  --overlay: #f8f5ee;
+  --border: #d3cab6;
+  --border-strong: #a79c85;
   --fg: #1c1a17;
-  --fg-muted: #5d574d;
-  --fg-subtle: #8d8578;
+  --fg-muted: #4d483f;
+  --fg-subtle: #6f695e;
   --accent: #9e3214;
   --accent-fg: #f7f2e8;
   --danger: #a3261a;
@@ -70,10 +74,12 @@ html[data-style="koi"][data-theme="light"] {
   --glass: rgb(60 50 30 / 0.1);
   --glass-stroke: rgb(60 50 30 / 0.12);
   --tick: rgb(60 50 30 / 0.22);
+  --radius-card: 8px;
+  --radius-field: 6px;
   color-scheme: light;
 }
 
-/* Headings and small labels in the pond's mono face; body text stays readable. */
+/* Headings in the pond's mono face; body text stays in the system sans. */
 html[data-style="koi"] h1,
 html[data-style="koi"] h2 {
   font-family: var(--font-mono);
@@ -87,19 +93,9 @@ html[data-style="koi"] aside [class*="text-[12px]"] {
   letter-spacing: 0.06em;
 }
 
-/* The chat area gets a faint water sheen instead of a flat colour. */
+/* The chat area keeps one faint trace of water at the top edge, nothing more. */
 html[data-style="koi"] main {
   background:
-    radial-gradient(900px 500px at 50% -10%, rgb(232 120 79 / 0.07), transparent 60%),
+    radial-gradient(900px 420px at 50% -12%, rgb(232 120 79 / 0.04), transparent 65%),
     var(--canvas);
-}
-
-/* Message bubbles are a little deeper, like the koi's shade. */
-html[data-style="koi"] main .rounded-2xl.bg-raised,
-html[data-style="koi"] main .bg-raised.rounded-3xl {
-  background: var(--raised);
-}
-
-html[data-style="koi"] .quiet-scroll:hover {
-  scrollbar-color: var(--border-strong) transparent;
 }

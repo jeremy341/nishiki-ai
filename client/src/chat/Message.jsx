@@ -3,7 +3,6 @@ import { Check, Copy, FileText, Pencil, RotateCw, StickyNote } from "lucide-reac
 import { lazy, Suspense, useState } from "react";
 import { toast } from "sonner";
 import Answer from "../ui/Answer.jsx";
-import OrbView from "../OrbView.jsx";
 import { Button, IconButton } from "../ui/ui.jsx";
 
 // Charts are a large library: loaded only when an answer actually has one.
@@ -25,9 +24,9 @@ function FileChip({ file, onOpen }) {
     <button
       type="button"
       onClick={() => onOpen?.(file)}
-      className="flex max-w-full items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-left text-sm transition-colors hover:border-border-strong"
+      className="flex max-w-full items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-left text-[13px] transition-colors hover:border-border-strong"
     >
-      <FileText size={15} aria-hidden="true" className="shrink-0 text-fg-muted" />
+      <FileText size={14} aria-hidden="true" className="shrink-0 text-fg-muted" />
       <span className="truncate">{file.name}</span>
     </button>
   );
@@ -49,7 +48,7 @@ function EditQuestion({ value, busy, onSave, onCancel }) {
         rows={3}
         maxLength={4000}
         aria-label={t("Edit message")}
-        className="w-full resize-none rounded-2xl border border-border bg-surface px-3.5 py-2.5 text-[15px] leading-6 focus:border-border-strong focus:outline-none focus:ring-2 focus:ring-fg/10"
+        className="w-full resize-none rounded-lg border border-border bg-surface px-3.5 py-2.5 text-base leading-6 focus:border-fg-subtle focus:outline-none md:text-[15px]"
       />
       <div className="flex justify-end gap-2">
         <Button size="sm" variant="ghost" onClick={onCancel} disabled={busy}>{t("Cancel")}</Button>
@@ -67,7 +66,7 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
 
   if (message.role === "user") {
     return (
-      <div className="flex justify-end">
+      <div className="motion-enter group flex justify-end">
         <div className="flex max-w-[85%] flex-col items-end gap-2 md:max-w-[70%]">
           {attachments.length > 0 && (
             <div className="flex flex-wrap justify-end gap-2">
@@ -77,7 +76,7 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
                     src={a.previewUrl || `/api/attachments/${a.id}`}
                     alt={a.name}
                     loading="lazy"
-                    className="max-h-60 max-w-full rounded-lg border border-border object-cover"
+                    className="max-h-60 max-w-full rounded-md border border-border object-cover"
                   />
                 </button>
               ) : (
@@ -93,14 +92,14 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
               onSave={(content) => { setEditing(false); onEdit?.(message.id, content); }}
             />
           ) : (
-            <div className="flex items-start gap-1">
+            <div className="flex items-start gap-0.5">
               {saved && onEdit && !busy && (
-                <IconButton label={t("Edit message")} onClick={() => setEditing(true)} className="size-9 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100">
-                  <Pencil size={15} aria-hidden="true" />
+                <IconButton label={t("Edit message")} onClick={() => setEditing(true)} className="size-11 opacity-100 md:size-8 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:focus-visible:opacity-100">
+                  <Pencil size={14} aria-hidden="true" />
                 </IconButton>
               )}
               {message.content && (
-                <div className="whitespace-pre-wrap break-words rounded-lg bg-raised px-3.5 py-2.5 text-[15px] leading-6">
+                <div className="whitespace-pre-wrap break-words rounded-lg bg-raised px-3.5 py-2 text-[15px] leading-6">
                   {message.content}
                 </div>
               )}
@@ -126,74 +125,69 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
   }
 
   return (
-    <article className="group flex min-w-0 gap-3 text-[15px] leading-7" aria-label={t("Assistant")}>
-      <div className="mt-1.5 shrink-0" aria-hidden="true">
-        <OrbView status="idle" size={22} decorative />
-      </div>
-      <div className="min-w-0 flex-1">
-        {message.activity?.length > 0 && (
-          <p className="mb-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-fg-subtle">
-            {message.activity.map((label) => (
-              <span key={label} className="inline-flex items-center gap-1.5">
-                <Check size={13} aria-hidden="true" /> {label}
-              </span>
-            ))}
-          </p>
-        )}
-        {message.content && <Answer text={message.content} />}
-        {attachments.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {attachments.map((a) => (isImage(a) ? (
-              <button key={a.id} type="button" onClick={() => onOpenFile?.(a)} className="max-w-full">
-                <img src={`/api/attachments/${a.id}`} alt={a.name} loading="lazy"
-                  className="max-h-60 max-w-full rounded-lg border border-border object-cover" />
-              </button>
-            ) : (
-              <FileChip key={a.id} file={a} onOpen={onOpenFile} />
-            )))}
-          </div>
-        )}
-        {widgets.length > 0 && (
-          <Suspense fallback={null}>
-            <Widgets widgets={widgets} />
-          </Suspense>
-        )}
-        {sources.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-fg-subtle">
-            <span>{t("Sources")}</span>
-            {sources.map((s) => (
-              <a
-                key={s.url}
-                href={s.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="max-w-[16rem] truncate text-fg-muted underline decoration-border-strong underline-offset-4 hover:text-fg"
-              >
-                {s.title || domainOf(s.url)}
-              </a>
-            ))}
-          </div>
-        )}
-        {(message.content || canRegenerate) && saved && (
-          <div className="-ml-2 mt-1 flex items-center gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
-            {message.content && (
-              <IconButton label={copied ? t("Copied") : t("Copy answer")} onClick={copy} className="size-9">
-                {copied ? <Check size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />}
-              </IconButton>
-            )}
-            {message.content && onSaveNote && (
-              <IconButton label={t("Save as note")} onClick={() => onSaveNote(message)} className="size-9">
-                <StickyNote size={15} aria-hidden="true" />
-              </IconButton>
-            )}
-            {canRegenerate && onRegenerate && !busy && (
-              <IconButton label={t("Generate again")} onClick={() => onRegenerate(message.id)} className="size-9">
-                <RotateCw size={15} aria-hidden="true" />
-              </IconButton>
-            )}
-          </div>
-        )}
-      </div>
+    <article className="motion-enter group min-w-0 text-[15px] leading-7 md:text-base" aria-label={t("Assistant")}>
+      {message.activity?.length > 0 && (
+        <p className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs leading-5 text-fg-subtle">
+          {message.activity.map((label) => (
+            <span key={label} className="inline-flex items-center gap-1.5">
+              <Check size={12} aria-hidden="true" /> {label}
+            </span>
+          ))}
+        </p>
+      )}
+      {message.content && <Answer text={message.content} />}
+      {attachments.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {attachments.map((a) => (isImage(a) ? (
+            <button key={a.id} type="button" onClick={() => onOpenFile?.(a)} className="max-w-full">
+              <img src={`/api/attachments/${a.id}`} alt={a.name} loading="lazy"
+                className="max-h-60 max-w-full rounded-md border border-border object-cover" />
+            </button>
+          ) : (
+            <FileChip key={a.id} file={a} onOpen={onOpenFile} />
+          )))}
+        </div>
+      )}
+      {widgets.length > 0 && (
+        <Suspense fallback={null}>
+          <Widgets widgets={widgets} />
+        </Suspense>
+      )}
+      {sources.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] leading-5 text-fg-subtle">
+          <span className="font-mono text-xs uppercase tracking-wider">{t("Sources")}</span>
+          {sources.map((s) => (
+            <a
+              key={s.url}
+              href={s.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="max-w-[16rem] truncate text-fg-muted underline decoration-border-strong underline-offset-4 hover:text-fg"
+            >
+              {s.title || domainOf(s.url)}
+            </a>
+          ))}
+        </div>
+      )}
+      {(message.content || canRegenerate) && saved && (
+        <div className="-ml-2 mt-2 flex items-center gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
+          {message.content && (
+            <IconButton label={copied ? t("Copied") : t("Copy answer")} onClick={copy} className="size-9 md:size-8">
+              {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+            </IconButton>
+          )}
+          {message.content && onSaveNote && (
+            <IconButton label={t("Save as note")} onClick={() => onSaveNote(message)} className="size-9 md:size-8">
+              <StickyNote size={14} aria-hidden="true" />
+            </IconButton>
+          )}
+          {canRegenerate && onRegenerate && !busy && (
+            <IconButton label={t("Generate again")} onClick={() => onRegenerate(message.id)} className="size-9 md:size-8">
+              <RotateCw size={14} aria-hidden="true" />
+            </IconButton>
+          )}
+        </div>
+      )}
     </article>
   );
 }

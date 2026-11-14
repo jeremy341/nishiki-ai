@@ -14,7 +14,8 @@ export function ttsFormat() {
 }
 
 const SPEAK_SYSTEM = "You are a text-to-speech engine. Read the user's message aloud exactly as written, "
-  + "in the same language. Do not add, remove, translate or comment on anything.";
+  + "in the language it is written in. German text must be spoken in German, with natural native German pronunciation and a warm, relaxed tone; "
+  + "never read German with an English accent and never translate. Do not add, remove or comment on anything.";
 
 export async function synthesizeSpeech(text, voice) {
   if (!serverTtsConfigured()) throw new AppError(404, "Server-side voice is not configured.");

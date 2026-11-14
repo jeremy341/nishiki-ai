@@ -443,12 +443,14 @@ app.get("/api/conversations/:id/messages", requireUser, (req, res) => {
   });
 });
 
-app.post("/api/conversations/:id/messages", requireUser, chatLimiter, async (req, res) => {
+// Stores the user's message, asks the assistant and returns the reply. hooks: { onText, onReset, onUser }
+async function handleMessage(req, hooks = {}) {
   const conversationId = ownConversation(req.user.id, req.params.id);
-  const { message, attachmentIds, useCalendar } = parse(z.object({
+  const { message, attachmentIds, useCalendar, voice } = parse(z.object({
     message: z.string().trim().max(4000),
     attachmentIds: z.array(z.number().int().positive()).max(MAX_ATTACHMENTS_PER_MESSAGE).optional(),
     useCalendar: z.boolean().optional(),
+    voice: z.boolean().optional(),
   }), req.body);
   const ids = [...new Set(attachmentIds || [])];
   if (!message && !ids.length) throw new AppError(400, "Write a message or attach a file.");
@@ -464,19 +466,58 @@ app.post("/api/conversations/:id/messages", requireUser, chatLimiter, async (req
 
     const names = (attachmentsByMessage(conversationId).get(userMessageId) || []).map((f) => f.name);
     const { assistantId, actionIds } = await answerConversation({
-      userId, conversationId, useCalendar, titleMessage: message, attachmentNames: names, userMessageId,
+      userId, conversationId, useCalendar, titleMessage: message, attachmentNames: names, userMessageId, voice: Boolean(voice),
+      onText: hooks.onText, onReset: hooks.onReset,
     });
     const row = db.prepare("SELECT id, role, content, created_at, sources, widgets, activity FROM messages WHERE id = ?").get(assistantId);
-    res.json({
+    return {
       message: messageRow(row, attachmentsByMessage(conversationId).get(assistantId) || []),
       actions: pendingByIds(actionIds),
-    });
+    };
   } catch (error) {
     // A question that got no answer stays out of the history, and its files go back to "unsent".
     unlinkMessage(userMessageId);
     db.prepare("DELETE FROM messages WHERE id = ?").run(userMessageId);
     throw error;
   }
+}
+
+app.post("/api/conversations/:id/messages", requireUser, chatLimiter, async (req, res) => {
+  res.json(await handleMessage(req));
+});
+
+// The same, but the reply arrives as server-sent events while it is written:
+//   data: {"type":"delta","text":"..."}   a piece of the answer
+//   data: {"type":"reset"}                the words so far were only a lead-in to a tool call
+//   data: {"type":"done", message, actions}   the finished, saved answer
+//   data: {"type":"error","error":"...","status":502}
+app.post("/api/conversations/:id/messages/stream", requireUser, chatLimiter, async (req, res) => {
+  // Anything wrong with the request itself (bad id, bad body) is still a normal JSON error.
+  ownConversation(req.user.id, req.params.id);
+  res.set({
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-cache, no-transform",
+    "X-Accel-Buffering": "no",
+  });
+  res.flushHeaders();
+  let open = true;
+  res.on("close", () => { open = false; });
+  const send = (event) => { if (open) res.write(`data: ${JSON.stringify(event)}\n\n`); };
+  try {
+    const result = await handleMessage(req, {
+      onText: (text) => send({ type: "delta", text }),
+      onReset: () => send({ type: "reset" }),
+    });
+    send({ type: "done", ...result });
+  } catch (error) {
+    if (error instanceof AppError) send({ type: "error", error: error.message, status: error.status });
+    else if (error?.issues || error?.name === "ZodError") send({ type: "error", error: "That message could not be sent.", status: 400 });
+    else {
+      console.error("Stream failed:", error?.name, error?.message);
+      send({ type: "error", error: "Something went wrong.", status: 500 });
+    }
+  }
+  res.end();
 });
 
 // The whole conversation as the chat screen needs it.

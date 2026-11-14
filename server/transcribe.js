@@ -1,9 +1,17 @@
 import { chatCompletion } from "./ai.js";
 import { AppError } from "./errors.js";
+import { getPrefs } from "./prefs.js";
 import { roleConfigured } from "./providers.js";
 
-const PROMPT = "Transcribe the speech in this audio exactly as spoken, in the language it was spoken. "
-  + "Output only the transcript, with no commentary. If there is no speech, output nothing.";
+// The model must write down what was said, in the language it was said in. Without a hint it tends to
+// answer a German recording with an English translation, so the likely language is named.
+function promptFor(userId) {
+  const prefs = getPrefs(userId);
+  const language = prefs.language === "en" ? "English" : prefs.language === "de" ? "German" : prefs.uiLanguage === "en" ? "English" : "German";
+  const other = language === "German" ? "English" : "German";
+  return `Transcribe this audio word for word. The speaker most likely speaks ${language}; if they speak ${other} or another language, write that language. `
+    + "Never translate. Keep the original words, spelling and umlauts. Output only the transcript, with no commentary. If there is no speech, output nothing.";
+}
 
 // Speech-to-text through the provider set for the "stt" job. Input is 16 kHz mono WAV.
 export async function transcribe(wavBase64, userId) {
@@ -12,7 +20,7 @@ export async function transcribe(wavBase64, userId) {
     const text = await chatCompletion([{
       role: "user",
       content: [
-        { type: "text", text: PROMPT },
+        { type: "text", text: promptFor(userId) },
         { type: "input_audio", input_audio: { data: wavBase64, format: "wav" } },
       ],
     }], { role: "stt", userId, maxTokens: 1500, temperature: 0 });

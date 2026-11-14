@@ -37,26 +37,83 @@ export async function speak(text, { useServerVoice, onStart, onEnd, onError }) {
       fellBack = true;
       speakInBrowser(text, { onStart, onEnd, onError });
     };
+    const run = ++playRun;
+    const pieces = splitForSpeech(text);
+    // The next pieces are requested while the current one plays, so there is no gap between sentences.
+    const fetched = new Array(pieces.length);
+    const request = (i) => {
+      if (i < pieces.length && !fetched[i]) {
+        fetched[i] = fetchSpeechAudio(pieces[i]);
+        fetched[i].catch(() => {});
+      }
+    };
+    request(0);
+    request(1);
     try {
-      const blob = await fetchSpeechAudio(text);
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
-      audioUrl = URL.createObjectURL(blob);
-      audioEl ||= new Audio();
-      audioEl.src = audioUrl;
-      ensurePlaybackMeter();
-      meterCtx?.resume?.().catch(() => {});
-      audioEl.onplaying = () => onStart?.();
-      audioEl.onended = () => onEnd?.();
-      // Undecodable audio or a blocked autoplay: use the browser voice instead.
-      audioEl.onerror = fallback;
-      await audioEl.play();
-      return;
+      for (let i = 0; i < pieces.length; i += 1) {
+        let blob;
+        try {
+          blob = await fetched[i];
+        } catch (error) {
+          if (i === 0) throw error;
+          continue; // a lost sentence in the middle is skipped
+        }
+        if (run !== playRun) return;
+        request(i + 2);
+        await playBlob(blob, run, i === 0 ? onStart : undefined);
+        if (run !== playRun) return;
+      }
+      onEnd?.();
     } catch {
-      fallback();
-      return;
+      if (run === playRun) {
+        if (!started(run)) fallback();
+        else onEnd?.();
+      }
     }
+    return;
   }
   speakInBrowser(text, { onStart, onEnd, onError });
+}
+
+let playRun = 0;
+let startedRun = -1;
+const started = (run) => startedRun === run;
+
+// Plays one audio piece. Resolves when it ended; rejects when it cannot be played.
+function playBlob(blob, run, onFirstSound) {
+  return new Promise((resolve, reject) => {
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    audioUrl = URL.createObjectURL(blob);
+    audioEl ||= new Audio();
+    audioEl.src = audioUrl;
+    ensurePlaybackMeter();
+    meterCtx?.resume?.().catch(() => {});
+    audioEl.onplaying = () => {
+      startedRun = run;
+      onFirstSound?.();
+    };
+    audioEl.onended = () => resolve();
+    audioEl.onerror = () => (run === playRun ? reject(new Error("audio")) : resolve());
+    audioEl.play().catch(reject);
+  });
+}
+
+// Short pieces: the first is a single sentence so sound starts early; later ones are a few sentences each.
+function splitForSpeech(text) {
+  const clean = String(text).replace(/[*_`#>]+/g, "").replace(/\s+/g, " ").trim();
+  const sentences = clean.match(/[^.!?…\n]+[.!?…]*\s*/g) || [clean];
+  const pieces = [];
+  let current = "";
+  for (const sentence of sentences) {
+    current += sentence;
+    const target = pieces.length === 0 ? 40 : 220;
+    if (current.length >= target) {
+      pieces.push(current.trim());
+      current = "";
+    }
+  }
+  if (current.trim()) pieces.push(current.trim());
+  return pieces.length ? pieces : [clean];
 }
 
 function speakInBrowser(text, { onStart, onEnd, onError }) {
@@ -76,6 +133,7 @@ function speakInBrowser(text, { onStart, onEnd, onError }) {
 }
 
 export function stopSpeaking() {
+  playRun += 1;
   if (canSpeakInBrowser) window.speechSynthesis.cancel();
   if (audioEl) {
     audioEl.pause();

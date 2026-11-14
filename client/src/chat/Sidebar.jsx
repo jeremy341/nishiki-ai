@@ -1,5 +1,5 @@
 import {
-  CalendarClock, ChevronDown, ChevronRight, Folder, FolderInput, FolderPlus, LayoutGrid, Library, MoreHorizontal, Pencil,
+  CalendarClock, ChevronDown, ChevronRight, FolderInput, FolderPlus, LayoutGrid, Library, MoreHorizontal, Pencil,
   Pin, PinOff, Plus, Search, Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -30,9 +30,9 @@ function NavItem({ icon: Icon, label, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex h-9 w-full items-center gap-2.5 rounded-md px-2 text-left text-sm text-fg-muted transition-colors hover:bg-raised hover:text-fg"
+      className="flex h-11 w-full items-center gap-2.5 rounded-md px-2 text-left text-sm text-fg-muted transition-colors hover:bg-raised hover:text-fg md:h-8"
     >
-      <Icon size={17} aria-hidden="true" className="shrink-0" />
+      <Icon size={16} aria-hidden="true" className="shrink-0" />
       <span className="truncate">{label}</span>
     </button>
   );
@@ -40,7 +40,7 @@ function NavItem({ icon: Icon, label, onClick }) {
 
 function SectionTitle({ children, action }) {
   return (
-    <div className="flex items-center justify-between px-2 pb-1 pt-4 text-[12px] font-medium text-fg-subtle">
+    <div className="flex min-h-6 items-center justify-between px-2 pb-1 pt-4 font-mono text-[11px] uppercase tracking-wider text-fg-subtle">
       <span>{children}</span>
       {action}
     </div>
@@ -50,13 +50,13 @@ function SectionTitle({ children, action }) {
 function ChatRow({ chat, active, onSelect, onRename, onDelete, onTogglePin, onMove }) {
   const title = chat.title || t("New chat");
   return (
-    <li className={`group flex items-center rounded-md transition-colors ${active ? "bg-raised" : "hover:bg-raised/60"}`}>
+    <li className={`group flex items-center rounded-md transition-colors ${active ? "bg-raised" : "hover:bg-raised/50"}`}>
       <button
         type="button"
         aria-current={active ? "true" : undefined}
         onClick={() => onSelect(chat.id)}
         className={`h-11 md:h-8 min-w-0 flex-1 overflow-hidden whitespace-nowrap fade-end rounded-md px-2 text-left text-sm ${
-          active ? "font-medium text-fg" : "text-fg-muted hover:text-fg"
+          active ? "text-fg" : "text-fg-muted hover:text-fg"
         }`}
       >
         {chat.pinned && <Pin size={11} aria-hidden="true" className="-mt-0.5 mr-1.5 inline text-fg-subtle" />}
@@ -67,7 +67,7 @@ function ChatRow({ chat, active, onSelect, onRename, onDelete, onTogglePin, onMo
           <button
             type="button"
             aria-label={t("Options for {title}", { title })}
-            className="mr-0.5 grid size-11 md:size-8 shrink-0 place-items-center rounded-md text-fg-subtle opacity-100 hover:text-fg md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+            className="mr-0.5 grid size-11 shrink-0 place-items-center rounded-md text-fg-subtle opacity-100 hover:text-fg md:size-8 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
           >
             <MoreHorizontal size={16} aria-hidden="true" />
           </button>
@@ -96,15 +96,14 @@ function ChatList({ chats, ...rest }) {
 function ProjectRow({ project, chats, open, onToggle, onNewChat, onEdit, onDelete, ...rest }) {
   return (
     <div>
-      <div className="group flex items-center rounded-md hover:bg-raised/60">
+      <div className="group flex items-center rounded-md hover:bg-raised/50">
         <button
           type="button"
           onClick={onToggle}
           aria-expanded={open}
-          className="flex h-8 min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-left text-sm text-fg-muted hover:text-fg"
+          className="flex h-11 min-w-0 flex-1 items-center gap-1.5 rounded-md px-2 text-left text-sm text-fg-muted hover:text-fg md:h-8"
         >
-          {open ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronRight size={14} aria-hidden="true" />}
-          <Folder size={15} aria-hidden="true" className="shrink-0" />
+          {open ? <ChevronDown size={14} aria-hidden="true" className="shrink-0 text-fg-subtle" /> : <ChevronRight size={14} aria-hidden="true" className="shrink-0 text-fg-subtle" />}
           <span className="truncate">{project.name}</span>
         </button>
         <Menu
@@ -112,7 +111,7 @@ function ProjectRow({ project, chats, open, onToggle, onNewChat, onEdit, onDelet
             <button
               type="button"
               aria-label={t("Options for {title}", { title: project.name })}
-              className="mr-0.5 grid size-8 shrink-0 place-items-center rounded-md text-fg-subtle opacity-100 hover:text-fg md:opacity-0 md:group-hover:opacity-100"
+              className="mr-0.5 grid size-11 shrink-0 place-items-center rounded-md text-fg-subtle opacity-100 hover:text-fg md:size-8 md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
             >
               <MoreHorizontal size={16} aria-hidden="true" />
             </button>
@@ -125,7 +124,7 @@ function ProjectRow({ project, chats, open, onToggle, onNewChat, onEdit, onDelet
         </Menu>
       </div>
       {open && (
-        <div className="ml-4 border-l border-border pl-1">
+        <div className="ml-3 border-l border-border pl-1">
           {chats.length ? <ChatList chats={chats} {...rest} /> : (
             <p className="px-2 py-1.5 text-[13px] text-fg-subtle">{t("No chats in this project yet.")}</p>
           )}
@@ -163,7 +162,7 @@ export default function Sidebar({
 
   return (
     <div className="quiet-scroll flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
-      <label className="mb-1 flex h-9 items-center gap-2 rounded-md bg-raised/60 px-2.5 focus-within:ring-2 focus-within:ring-fg/10">
+      <label className="mb-2 flex h-11 items-center gap-2 rounded-md border border-border px-2.5 focus-within:border-fg-subtle md:h-9">
         <Search size={15} aria-hidden="true" className="shrink-0 text-fg-subtle" />
         <input
           type="search"
@@ -181,11 +180,11 @@ export default function Sidebar({
               <button
                 type="button"
                 onClick={() => { setQuery(""); onSelect(r.id); }}
-                className="grid w-full gap-0.5 rounded-md px-2 py-1.5 text-left hover:bg-raised/60"
+                className="grid min-h-11 w-full gap-0.5 rounded-md px-2 py-1.5 text-left hover:bg-raised/50"
               >
-                <span className="truncate text-sm font-medium">{r.title || t("New chat")}</span>
+                <span className="truncate text-sm">{r.title || t("New chat")}</span>
                 {r.snippet && <span className="line-clamp-2 text-[13px] text-fg-muted">{r.snippet}</span>}
-                <span className="text-[12px] text-fg-subtle">{new Date(`${String(r.updatedAt).replace(" ", "T")}Z`).toLocaleDateString(currentLocale(), { day: "numeric", month: "short" })}</span>
+                <span className="font-mono text-[11px] text-fg-subtle">{new Date(`${String(r.updatedAt).replace(" ", "T")}Z`).toLocaleDateString(currentLocale(), { day: "numeric", month: "short" })}</span>
               </button>
             </li>
           ))}
@@ -211,7 +210,7 @@ export default function Sidebar({
       <section>
         <SectionTitle
           action={(
-            <IconButton label={t("New project")} onClick={onNewProject} className="size-7 !rounded-md">
+            <IconButton label={t("New project")} onClick={onNewProject} className="size-8">
               <FolderPlus size={15} aria-hidden="true" />
             </IconButton>
           )}

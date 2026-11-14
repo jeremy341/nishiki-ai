@@ -1,9 +1,9 @@
-import { CalendarClock, MessageSquare, Pencil, Play, Plus, Trash2 } from "lucide-react";
+import { MessageSquare, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "./api.js";
 import { currentLocale, t } from "./i18n/index.js";
-import { Button, Card, Field, FullPage, IconButton, Input, Modal, Select, Sheet, Switch } from "./ui/ui.jsx";
+import { Button, Field, FullPage, IconButton, Input, Modal, Select, Sheet, Switch } from "./ui/ui.jsx";
 
 // Scheduled tasks: a question that the assistant answers by itself, once, every day or every week.
 // Each run opens its own chat, and the answer appears there (and as a phone notice, if set up).
@@ -176,56 +176,59 @@ export default function Tasks({ onClose, onOpenChat }) {
       <div className="grid gap-5">
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm text-fg-muted">{t("The assistant answers these by itself, in their own chat.")}</p>
-          <Button variant="primary" className="shrink-0 whitespace-nowrap" onClick={() => setEditing({})}><Plus size={16} aria-hidden="true" /> {t("New task")}</Button>
+          <Button variant="primary" className="shrink-0 whitespace-nowrap max-md:h-11" onClick={() => setEditing({})}><Plus size={16} aria-hidden="true" /> {t("New task")}</Button>
         </div>
 
-        {error && <p role="alert" className="rounded-xl bg-danger-soft px-4 py-2.5 text-sm text-danger">{error}</p>}
+        {error && <p role="alert" className="rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
 
         {tasks === null && !error && (
-          <div className="grid gap-3" aria-busy="true">
-            {[0, 1].map((i) => <div key={i} className="h-28 animate-pulse rounded-xl border border-border bg-surface" />)}
+          <div className="divide-y divide-border overflow-hidden rounded-lg border border-border" aria-busy="true">
+            {[0, 1].map((i) => <div key={i} className="h-24 animate-pulse bg-raised/40" />)}
           </div>
         )}
 
         {tasks && !tasks.length && (
-          <Card className="grid justify-items-center gap-3 px-6 py-10 text-center">
-            <CalendarClock size={28} aria-hidden="true" className="text-fg-muted" />
-            <p className="font-medium">{t("No scheduled tasks yet")}</p>
-            <p className="max-w-[40ch] text-sm text-fg-muted">{t("For example: every weekday at 8:00, a short summary of my calendar and mail.")}</p>
-          </Card>
+          <div className="grid gap-1 rounded-lg border border-dashed border-border px-6 py-10 text-center">
+            <p className="text-sm font-medium">{t("No scheduled tasks yet")}</p>
+            <p className="mx-auto max-w-[40ch] text-sm text-fg-muted">{t("For example: every weekday at 8:00, a short summary of my calendar and mail.")}</p>
+          </div>
         )}
 
-        {tasks?.map((task) => (
-          <Card key={task.id} className="grid gap-3 p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="truncate font-semibold">{task.title}</div>
-                <div className="mt-0.5 text-sm text-fg-muted">{scheduleText(task)}</div>
-              </div>
-              <Switch checked={task.enabled} onCheckedChange={(v) => toggle(task, v)} label={t("On")} />
-            </div>
-            <p className="line-clamp-2 text-sm text-fg-muted">{task.prompt}</p>
-            <div className="grid gap-1 text-[13px] text-fg-subtle">
-              {task.enabled && task.nextRun && <span>{t("Next: {when}", { when: whenText(task.nextRun) })}</span>}
-              {task.lastRun && <span>{t("Last ran {when}", { when: whenText(task.lastRun) })}</span>}
-              {task.lastError && <span className="text-danger">{task.lastError}</span>}
-            </div>
-            <div className="flex flex-wrap items-center gap-1 pt-1">
-              <Button size="sm" onClick={() => runNow(task)}><Play size={14} aria-hidden="true" /> {t("Run now")}</Button>
-              {task.lastConversationId && (
-                <IconButton label={t("Open the last result")} onClick={() => onOpenChat(task.lastConversationId)} className="size-9">
-                  <MessageSquare size={15} aria-hidden="true" />
-                </IconButton>
-              )}
-              <IconButton label={t("Edit task")} onClick={() => setEditing(task)} className="size-9">
-                <Pencil size={15} aria-hidden="true" />
-              </IconButton>
-              <IconButton label={t("Delete task")} onClick={() => setDeleting(task)} className="size-9">
-                <Trash2 size={15} aria-hidden="true" />
-              </IconButton>
-            </div>
-          </Card>
-        ))}
+        {tasks?.length > 0 && (
+          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+            {tasks.map((task) => (
+              <li key={task.id} className="grid gap-2 px-4 py-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className={`truncate text-sm font-medium ${task.enabled ? "" : "text-fg-muted"}`}>{task.title}</div>
+                    <div className="mt-0.5 text-[13px] text-fg-muted">{scheduleText(task)}</div>
+                  </div>
+                  <Switch checked={task.enabled} onCheckedChange={(v) => toggle(task, v)} label={t("On")} />
+                </div>
+                <p className="line-clamp-2 text-[13px] text-fg-muted">{task.prompt}</p>
+                <div className="grid gap-0.5 font-mono text-[11px] text-fg-subtle">
+                  {task.enabled && task.nextRun && <span>{t("Next: {when}", { when: whenText(task.nextRun) })}</span>}
+                  {task.lastRun && <span>{t("Last ran {when}", { when: whenText(task.lastRun) })}</span>}
+                  {task.lastError && <span className="text-danger">{task.lastError}</span>}
+                </div>
+                <div className="-mb-1 flex flex-wrap items-center gap-1">
+                  <Button size="sm" onClick={() => runNow(task)} className="max-md:h-11"><Play size={13} aria-hidden="true" /> {t("Run now")}</Button>
+                  {task.lastConversationId && (
+                    <IconButton label={t("Open the last result")} onClick={() => onOpenChat(task.lastConversationId)} className="size-11 md:size-8">
+                      <MessageSquare size={15} aria-hidden="true" />
+                    </IconButton>
+                  )}
+                  <IconButton label={t("Edit task")} onClick={() => setEditing(task)} className="size-11 md:size-8">
+                    <Pencil size={15} aria-hidden="true" />
+                  </IconButton>
+                  <IconButton label={t("Delete task")} onClick={() => setDeleting(task)} className="size-11 md:size-8">
+                    <Trash2 size={15} aria-hidden="true" />
+                  </IconButton>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <Sheet
