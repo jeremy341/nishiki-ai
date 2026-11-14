@@ -25,7 +25,6 @@ function KoiHero({ name, onSignIn, loading }) {
   const pondRef = useRef(null);
   const boxRef = useRef(null);
   const wordRef = useRef(null);
-  const tagRef = useRef(null);
   const theme = prefers("(prefers-color-scheme: light)") ? "light" : "pond";
 
   useEffect(() => {
@@ -54,14 +53,9 @@ function KoiHero({ name, onSignIn, loading }) {
       cw: narrow() ? 4 : 7, ch: narrow() ? 5 : 9,
       maxW: Math.min(innerWidth * (narrow() ? 0.9 : 0.8), 820), edge: true, glow: 1,
     }), look);
-    const tag = AsciiMark(tagRef.current, () => ({
-      text: t("Your private assistant"), font: `700 ${narrow() ? 64 : 84}px ${SERIF}`,
-      cw: narrow() ? 3 : 4, ch: narrow() ? 4 : 5,
-      maxW: Math.min(innerWidth * (narrow() ? 0.66 : 0.42), 420), tone: 0.88, edge: !narrow(), glow: 0.7,
-    }), look);
 
     const clock = () => performance.now() / 1000;
-    const build = () => Promise.all([title.build(clock()), tag.build(clock() + 0.35)]);
+    const build = () => title.build(clock());
     let alive = true;
     let raf = 0;
     let lastWords = 0;
@@ -79,7 +73,6 @@ function KoiHero({ name, onSignIn, loading }) {
       lastWords = now;
       const s = now / 1000;
       title.draw(s);
-      tag.draw(s);
     };
     raf = requestAnimationFrame(frame);
 
@@ -139,7 +132,7 @@ function KoiHero({ name, onSignIn, loading }) {
         <div ref={boxRef} className="intro-box">
           <h1 className="sr">{name}</h1>
           <canvas ref={wordRef} className="wordmark" aria-hidden="true" />
-          <canvas ref={tagRef} className="wordmark-tag" aria-hidden="true" />
+          <p className="koi-tagline">{t("Your private assistant")}</p>
           {!loading && (
             <div className="koi-enter">
               <Button variant="primary" size="lg" onClick={onSignIn} className="pointer-events-auto min-w-44 justify-center">

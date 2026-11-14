@@ -35,6 +35,8 @@
 .koi-hero .intro { position: fixed; inset: 0; z-index: 1; display: grid; place-content: center; justify-items: center; pointer-events: none; padding: 24px; }
 .koi-hero .intro-box { position: relative; isolation: isolate; display: grid; justify-items: center; gap: 6px; }
 .koi-hero .wordmark, .koi-hero .wordmark-tag { display: block; }
+/* The line under the name: plain text, so it can be read at any size. */
+.koi-hero .koi-tagline { margin: 10px 0 0; font-family: var(--font-mono); font-size: 15px; font-weight: 500; letter-spacing: 0.08em; color: var(--ink); text-align: center; }
 /* the title's light, blurred behind the letters */
 .koi-hero .mark-glow { position: absolute; z-index: -1; pointer-events: none; filter: blur(14px); }
 
