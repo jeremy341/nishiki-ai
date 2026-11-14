@@ -1,3 +1,4 @@
+import { clearAiKey, saveAiKey } from "./providers.js";
 import express from "express";
 import { z } from "zod";
 import { chatCompletion } from "./ai.js";
@@ -122,6 +123,18 @@ api.get("/admin/ai/models", requireUser, requireAdmin, async (req, res) => {
 
 api.put("/admin/ai", requireUser, requireAdmin, (req, res) => {
   res.json(saveRoles(req.body));
+});
+
+// The Hack Club key: saved encrypted in the app, never sent back.
+api.put("/admin/ai/key", requireUser, requireAdmin, (req, res) => {
+  const { key } = parse(z.object({ key: z.string().trim().min(10).max(300) }), req.body);
+  saveAiKey(key);
+  res.json(publicAi());
+});
+
+api.delete("/admin/ai/key", requireUser, requireAdmin, (req, res) => {
+  clearAiKey();
+  res.json(publicAi());
 });
 
 api.post("/admin/ai/test", requireUser, requireAdmin, async (req, res) => {

@@ -1471,6 +1471,56 @@ const JOBS = [
   },
 ];
 
+// The Hack Club key, set in the app. It is stored encrypted and never shown again.
+function AiKeyCard({ keySource, onChanged }) {
+  const [key, setKey] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function save(event) {
+    event.preventDefault();
+    setBusy(true);
+    try {
+      await api("/api/admin/ai/key", { method: "PUT", body: { key: key.trim() } });
+      setKey("");
+      toast.success(t("Key saved"));
+      onChanged();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    try {
+      await api("/api/admin/ai/key", { method: "DELETE", body: {} });
+      toast.success(t("Key removed"));
+      onChanged();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  }
+
+  const status = keySource === "app" ? t("Saved in the app, encrypted")
+    : keySource === "env" ? t("Set in the server's .env file")
+    : t("Not set yet");
+
+  return (
+    <Section icon={KeyRound} title={t("Hack Club AI key")} description={t("Stored encrypted on the server. It is never shown again after saving.")}>
+      <SettingRow label={t("Status")} description={status} />
+      <form className="grid gap-3" onSubmit={save}>
+        <Field label={t("New key")}>
+          <Input type="password" autoComplete="off" value={key} onChange={(e) => setKey(e.target.value)} />
+        </Field>
+        <div className="flex flex-wrap justify-end gap-2">
+          {keySource === "app" && <Button type="button" variant="danger" onClick={remove}>{t("Remove key")}</Button>}
+          <Button type="submit" variant="primary" disabled={busy || key.trim().length < 10}>{t("Save key")}</Button>
+        </div>
+      </form>
+    </Section>
+  );
+}
+
 function AiAdmin() {
   const { data, error, reload } = useLoad(() => api("/api/admin/ai"));
   const [draft, setDraft] = useState(null);
@@ -1506,6 +1556,7 @@ function AiAdmin() {
 
   return (
     <div className="grid gap-6">
+      <AiKeyCard keySource={data.provider.keySource} onChanged={reload} />
       <Card className="grid gap-3 p-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-semibold">{data.provider.name}</span>
@@ -1515,7 +1566,7 @@ function AiAdmin() {
         </div>
         <span className="truncate text-sm text-fg-muted">{data.provider.baseUrl}</span>
         <p className="text-sm text-fg-muted">
-          {t("The address and the key come from the server's .env file (HACKCLUB_BASE_URL, HACKCLUB_API_KEY). The key is never shown here.")}
+          {t("The address comes from the server's .env file (HACKCLUB_BASE_URL). The key is saved above and never shown here.")}
         </p>
       </Card>
 

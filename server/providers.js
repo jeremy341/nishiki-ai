@@ -51,8 +51,43 @@ export function aiBaseUrl() {
 }
 
 export function aiConfigured() {
-  return Boolean(config.ai.apiKey);
+  return Boolean(currentApiKey());
 }
+
+// The key the admin saved in the app (encrypted), or the one in the .env file.
+export function currentApiKey() {
+  return storedAiKey() || config.ai.apiKey || "";
+}
+
+function storedAiKey() {
+  const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(AI_KEY_SETTING);
+  if (!row) return "";
+  try {
+    return decryptSecret(row.value);
+  } catch {
+    return "";
+  }
+}
+
+// Stores the key encrypted. It is never sent back to the browser.
+export function saveAiKey(key) {
+  let sealed;
+  try {
+    sealed = encryptSecret(key);
+  } catch {
+    throw new AppError(503, "The server has no ENCRYPTION_KEY, so the key cannot be stored. Ask the server admin to set it.");
+  }
+  db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+    .run(AI_KEY_SETTING, sealed);
+  modelsCache = null;
+}
+
+export function clearAiKey() {
+  db.prepare("DELETE FROM settings WHERE key = ?").run(AI_KEY_SETTING);
+  modelsCache = null;
+}
+
+const AI_KEY_SETTING = "ai_key_enc";
 
 // Resolves a job to the one provider, its key and the chosen model.
 export function resolveRole(role) {
@@ -64,7 +99,7 @@ export function resolveRole(role) {
     providerId: PROVIDER_ID,
     providerName: PROVIDER_NAME,
     baseUrl: aiBaseUrl(),
-    apiKey: config.ai.apiKey,
+    apiKey: currentApiKey(),
     model: assignment.model,
     exa: true,
     voice: assignment.voice,
@@ -79,7 +114,10 @@ export function roleConfigured(role) {
 // What the admin page shows: the address, whether the key is set (never the key), the choices.
 export function publicAi() {
   return {
-    provider: { id: PROVIDER_ID, name: PROVIDER_NAME, baseUrl: aiBaseUrl(), keySet: aiConfigured() },
+    provider: {
+      id: PROVIDER_ID, name: PROVIDER_NAME, baseUrl: aiBaseUrl(), keySet: aiConfigured(),
+      keySource: storedAiKey() ? "app" : config.ai.apiKey ? "env" : null,
+    },
     roles: loadRoles(),
     voices: VOICES,
     formats: FORMATS,
@@ -93,7 +131,7 @@ export async function listModels() {
   let response;
   try {
     response = await fetch(`${aiBaseUrl()}/models`, {
-      headers: aiConfigured() ? { Authorization: `Bearer ${config.ai.apiKey}` } : {},
+      headers: aiConfigured() ? { Authorization: `Bearer ${currentApiKey()}` } : {},
       signal: AbortSignal.timeout(15_000),
     });
   } catch {
