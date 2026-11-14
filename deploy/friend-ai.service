@@ -1,0 +1,25 @@
+# systemd unit: keeps the app running and restarts it after crashes or reboots.
+# Install:  sudo cp deploy/friend-ai.service /etc/systemd/system/
+#           sudo systemctl daemon-reload && sudo systemctl enable --now friend-ai
+[Unit]
+Description=Friend AI assistant
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=friendai
+Group=friendai
+WorkingDirectory=/opt/friend-ai
+ExecStart=/usr/bin/node server/index.js
+EnvironmentFile=/opt/friend-ai/.env
+Restart=always
+RestartSec=5
+# Hardening: the app only needs its own folder (data/) to be writable.
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/friend-ai/data
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

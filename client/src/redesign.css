@@ -1,0 +1,109 @@
+/* Preview of the "koi" look for the whole app. It only applies when the page is opened with ?style=koi
+   (or after that choice was saved in this browser). The standard look stays as it is.
+   Colours are the three waters from ASCII Koi (pond, black, light). */
+
+html[data-style="koi"],
+html[data-style="koi"][data-theme="dark"] {
+  --canvas: #0e2a32;
+  --surface: #12353f;
+  --raised: #184452;
+  --overlay: #12353f;
+  --border: #224d59;
+  --border-strong: #35707d;
+  --fg: #ebe6dc;
+  --fg-muted: #b9b2a4;
+  --fg-subtle: #7f7a70;
+  --accent: #e8784f;
+  --accent-fg: #1a0f0a;
+  --danger: #ff8a7a;
+  --danger-soft: rgb(255 138 122 / 0.14);
+  --success: #8fd6a4;
+  --scrim: rgb(6 20 25 / 0.7);
+  --glass: rgb(235 230 220 / 0.12);
+  --glass-stroke: rgb(235 230 220 / 0.14);
+  --tick: rgb(235 230 220 / 0.32);
+  --radius-card: 18px;
+  --radius-field: 12px;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  html[data-style="koi"]:not([data-theme="dark"]) {
+    --canvas: #e9e4da;
+    --surface: #f3efe6;
+    --raised: #ebe5d8;
+    --overlay: #f3efe6;
+    --border: #d9d1bf;
+    --border-strong: #b9ae97;
+    --fg: #1c1a17;
+    --fg-muted: #5d574d;
+    --fg-subtle: #8d8578;
+    --accent: #9e3214;
+    --accent-fg: #f7f2e8;
+    --danger: #a3261a;
+    --danger-soft: rgb(163 38 26 / 0.09);
+    --success: #2f6b3c;
+    --scrim: rgb(40 34 26 / 0.4);
+    --glass: rgb(60 50 30 / 0.1);
+    --glass-stroke: rgb(60 50 30 / 0.12);
+    --tick: rgb(60 50 30 / 0.22);
+    color-scheme: light;
+  }
+}
+
+html[data-style="koi"][data-theme="light"] {
+  --canvas: #e9e4da;
+  --surface: #f3efe6;
+  --raised: #ebe5d8;
+  --overlay: #f3efe6;
+  --border: #d9d1bf;
+  --border-strong: #b9ae97;
+  --fg: #1c1a17;
+  --fg-muted: #5d574d;
+  --fg-subtle: #8d8578;
+  --accent: #9e3214;
+  --accent-fg: #f7f2e8;
+  --danger: #a3261a;
+  --danger-soft: rgb(163 38 26 / 0.09);
+  --success: #2f6b3c;
+  --scrim: rgb(40 34 26 / 0.4);
+  --glass: rgb(60 50 30 / 0.1);
+  --glass-stroke: rgb(60 50 30 / 0.12);
+  --tick: rgb(60 50 30 / 0.22);
+  color-scheme: light;
+}
+
+/* Headings and small labels in the pond's mono face; body text stays readable. */
+html[data-style="koi"] h1,
+html[data-style="koi"] h2 {
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
+html[data-style="koi"] aside[aria-label] h1,
+html[data-style="koi"] main h1 {
+  text-transform: lowercase;
+}
+
+/* Sections in the sidebar read like the pond's captions: small, tracked, mono. */
+html[data-style="koi"] aside [class*="text-[12px]"] {
+  font-family: var(--font-mono);
+  text-transform: lowercase;
+  letter-spacing: 0.06em;
+}
+
+/* The chat area gets a faint water sheen instead of a flat colour. */
+html[data-style="koi"] main {
+  background:
+    radial-gradient(900px 500px at 50% -10%, rgb(232 120 79 / 0.07), transparent 60%),
+    var(--canvas);
+}
+
+/* Message bubbles are a little deeper, like the koi's shade. */
+html[data-style="koi"] main .rounded-2xl.bg-raised,
+html[data-style="koi"] main .bg-raised.rounded-3xl {
+  background: var(--raised);
+}
+
+html[data-style="koi"] .quiet-scroll:hover {
+  scrollbar-color: var(--border-strong) transparent;
+}

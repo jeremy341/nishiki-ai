@@ -1,0 +1,6 @@
+# Caddy terminates HTTPS (automatic Let's Encrypt certificates) and forwards to the app on localhost.
+# Replace ai.example.com with your domain. The app itself listens only on 127.0.0.1:8787.
+ai.example.com {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:8787
+}
