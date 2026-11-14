@@ -13,13 +13,14 @@ export const DEFAULT_PREFS = {
   webSearch: true,
   readAloud: false, // replies are only read aloud when the user turns it on
   theme: "system", // system | light | dark
-  voice: "alloy", // voice for read-aloud replies
+  voice: "marin", // voice for read-aloud replies
   uiLanguage: "de", // language of the interface: de | en
   uiStyle: "koi", // look of the app: koi (the default, the pond look) | classic
   learnFromChats: true, // save durable facts from chats as memories (the user can see and delete them)
 };
 
-export const VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
+// All of these work with the audio model; marin and cedar are the most natural.
+export const VOICES = ["marin", "cedar", "coral", "sage", "ballad", "verse", "alloy", "ash", "echo", "shimmer", "fable", "onyx", "nova"];
 
 export const DEFAULT_FEATURES = {
   web: true, // web search and reading pages

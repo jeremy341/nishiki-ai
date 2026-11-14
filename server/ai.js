@@ -50,6 +50,20 @@ async function post(url, apiKey, body, timeoutMs) {
   return response.json().catch(() => null);
 }
 
+// Anthropic models reuse the start of a prompt only when it is marked. The start (instructions, memory) is the
+// same on every request, so it is marked; the clock line after it changes and is left out.
+function withPromptCache(model, messages) {
+  if (!model.startsWith("anthropic/")) return messages;
+  let at = -1;
+  messages.forEach((m, i) => {
+    if (m.role === "system" && typeof m.content === "string" && !m.content.startsWith("Now:")) at = i;
+  });
+  if (at < 0) return messages;
+  return messages.map((m, i) => (i === at
+    ? { ...m, content: [{ type: "text", text: m.content, cache_control: { type: "ephemeral" } }] }
+    : m));
+}
+
 // One model call for a job ("chat", "stt", "tts"). Returns the assistant message, which may
 // contain tool_calls instead of text. Token counts are recorded against the user.
 export async function callModel(messages, {
@@ -62,7 +76,7 @@ export async function callModel(messages, {
   onText, // called with each piece of answer text as it arrives (switches to streaming)
 } = {}) {
   const r = resolveRole(role);
-  const body = { model: r.model, messages, max_tokens: maxTokens, temperature };
+  const body = { model: r.model, messages: withPromptCache(r.model, messages), max_tokens: maxTokens, temperature };
   if (tools?.length) {
     body.tools = tools;
     body.tool_choice = "auto";
@@ -85,6 +99,10 @@ export async function callModel(messages, {
   recordUsage(userId, role, r.providerId, r.model, data.usage);
   if (budget && data.usage) budget.used += Number(data.usage.total_tokens) || 0;
   if (typeof message.content === "string") message.content = cleanModelText(message.content);
+  if (!message.content && !message.tool_calls?.length) {
+    // Helps to find out why a model said nothing: how it ended and what it spent.
+    console.warn("Empty answer from", r.model, "finish:", data.choices?.[0]?.finish_reason, "native:", data.choices?.[0]?.native_finish_reason, "usage:", JSON.stringify(data.usage || {}).slice(0, 200));
+  }
   return message;
 }
 

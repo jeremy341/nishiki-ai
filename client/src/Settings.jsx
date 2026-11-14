@@ -568,7 +568,7 @@ function VoiceTab() {
   );
 }
 
-const VOICE_NAMES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
+const VOICE_NAMES = ["marin", "cedar", "coral", "sage", "ballad", "verse", "alloy", "ash", "echo", "shimmer", "fable", "onyx", "nova"];
 
 // ---- Apps ----
 // Everything the assistant can use. Ready apps work at once; Google apps use one sign-in;
@@ -1571,6 +1571,16 @@ function AiAdmin() {
     }
   }
 
+  async function setEngine(engine) {
+    try {
+      await api("/api/admin/ai/voice-engine", { method: "PUT", body: { engine } });
+      toast.success(t("Voice engine saved"));
+      reload();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  }
+
   async function test(role) {
     setMessage({ text: t("Testing…"), error: false });
     try {
@@ -1595,6 +1605,15 @@ function AiAdmin() {
         <p className="mt-2 max-w-prose text-[13px] text-fg-muted">
           {t("The address comes from the server's .env file (HACKCLUB_BASE_URL). The key is saved above and never shown here.")}
         </p>
+      </Section>
+
+      <Section title={t("Voice engine")} description={t("How voice mode listens and answers.")}>
+        <div className="mt-3">
+          <Select aria-label={t("Voice engine")} className="w-full sm:w-[28rem]" value={data.voiceEngine || "live"} onChange={(e) => setEngine(e.target.value)}>
+            <option value="live">{t("Fast: one audio model listens and answers")}</option>
+            <option value="lane">{t("Smart: listens and thinks first, then speaks")}</option>
+          </Select>
+        </div>
       </Section>
 
       {JOBS.map((job) => (
@@ -1662,7 +1681,7 @@ function ModelPicker({ job, value, voices, formats, onChange, onTest }) {
       {job.role === "tts" && (
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t("Voice")} className="min-w-0">
-            <Select value={value.voice || "alloy"} onChange={(e) => onChange({ ...value, voice: e.target.value })}>
+            <Select value={value.voice || "marin"} onChange={(e) => onChange({ ...value, voice: e.target.value })}>
               {voices.map((v) => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
             </Select>
           </Field>

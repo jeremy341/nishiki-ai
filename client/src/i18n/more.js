@@ -332,6 +332,11 @@ Object.assign(de, {
   "Voice conversation": "Sprachgespräch",
   "Writes the answers in voice mode. Pick a fast model: it decides how soon the reply starts.": "Schreibt die Antworten im Sprachmodus. Nimm ein schnelles Modell: Es bestimmt, wie früh die Antwort beginnt.",
   "Normal": "Normal",
+  "Voice engine": "Sprach-Engine",
+  "How voice mode listens and answers.": "Wie der Sprachmodus zuhört und antwortet.",
+  "Fast: one audio model listens and answers": "Schnell: ein Audiomodell hört zu und antwortet",
+  "Smart: listens and thinks first, then speaks": "Schlau: hört zu und denkt zuerst, spricht dann",
+  "Voice engine saved": "Sprach-Engine gespeichert",
   "Sign in": "Anmelden",
   "Your private assistant": "Dein privater Assistent",
   "tap: cat's paw · hold or right-click: feed the koi": "tippen: Katzenpfote · lange drücken oder rechtsklicken: Koi füttern"

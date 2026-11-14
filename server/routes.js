@@ -8,7 +8,7 @@ import { AppError } from "./errors.js";
 import { deleteMemory, listMemories } from "./memory.js";
 import { inbox, mailSettingsPublic, runMailReport, saveMailSettings } from "./mail.js";
 import { usageLast24h } from "./usage.js";
-import { listModels, publicAi, roleConfigured, saveRoles } from "./providers.js";
+import { listModels, publicAi, roleConfigured, saveRoles, setVoiceEngine } from "./providers.js";
 import { getFeatures } from "./prefs.js";
 import { hashPassword } from "./security.js";
 
@@ -126,6 +126,12 @@ api.put("/admin/ai", requireUser, requireAdmin, (req, res) => {
 });
 
 // The Hack Club key: saved encrypted in the app, never sent back.
+api.put("/admin/ai/voice-engine", requireUser, requireAdmin, (req, res) => {
+  const { engine } = parse(z.object({ engine: z.enum(["live", "lane"]) }), req.body);
+  setVoiceEngine(engine);
+  res.json(publicAi());
+});
+
 api.put("/admin/ai/key", requireUser, requireAdmin, (req, res) => {
   const { key } = parse(z.object({ key: z.string().trim().min(10).max(300) }), req.body);
   saveAiKey(key);

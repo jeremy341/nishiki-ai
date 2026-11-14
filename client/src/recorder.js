@@ -70,7 +70,7 @@ async function blobToWavBase64(blob) {
 // the speaker pauses, and gives up if nobody speaks for a while.
 export function startRecording({
   manual = false,
-  silenceMs = 900,
+  silenceMs = 700,
   noSpeechMs = 10000,
   maxMs = 60000,
   onLevel,

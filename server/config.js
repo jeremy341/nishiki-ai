@@ -30,7 +30,7 @@ export const config = {
     // Claude Haiku 5.5 via Hack Club AI. Confirm ids with GET /proxy/v1/models.
     model: env("HACKCLUB_MODEL", "anthropic/claude-haiku-5.5"),
     maxTokens: Number(env("AI_MAX_TOKENS", "1500")),
-    voiceModel: env("VOICE_MODEL", "openai/gpt-6-luna"), // answers in voice mode: fast, same price as Haiku
+    voiceModel: env("VOICE_MODEL", "google/gemini-3.1-flash-lite"), // answers in voice mode: fast (about 1.7 s per answer with tools) and the best of the fast ones in tests
     // How much of a chat is sent to the model per reply (characters, roughly 4 per token).
     // Older parts beyond this are summarized, not dropped.
     historyChars: Number(env("HISTORY_CHARS", "60000")), // chat history sent per request, in characters
@@ -52,7 +52,7 @@ export const config = {
   tts: {
     enabled: env("TTS_ENABLED", "1") !== "0",
     model: env("TTS_MODEL", "openai/gpt-audio-mini"),
-    voice: env("TTS_VOICE", "alloy"),
+    voice: env("TTS_VOICE", "marin"),
     format: "wav", // the provider streams raw PCM16 only; the server wraps it as WAV
   },
 

@@ -11,7 +11,7 @@ const PROVIDER_ID = "hackclub";
 const PROVIDER_NAME = "Hack Club AI";
 const ROLES_KEY = "ai_roles";
 const MODELS_TTL_MS = 10 * 60 * 1000;
-const VOICES = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"];
+const VOICES = ["marin", "cedar", "coral", "sage", "ballad", "verse", "alloy", "ash", "echo", "shimmer", "fable", "onyx", "nova"];
 const FORMATS = ["mp3", "wav", "flac", "opus"];
 
 export const ROLES = ["chat", "voice", "stt", "tts"];
@@ -45,6 +45,18 @@ function saveRolesRow(value) {
   db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
     .run(ROLES_KEY, JSON.stringify(value));
   rolesCache = value;
+}
+
+// Which way voice mode works: "live" (one audio model listens and answers, fastest for small talk) or
+// "lane" (an audio-in model listens and decides, then the answer is spoken; smarter and cheaper).
+const ENGINE_KEY = "voice_engine";
+export function getVoiceEngine() {
+  const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(ENGINE_KEY);
+  return row?.value === "lane" ? "lane" : "live";
+}
+export function setVoiceEngine(engine) {
+  db.prepare("INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+    .run(ENGINE_KEY, engine === "lane" ? "lane" : "live");
 }
 
 export function aiBaseUrl() {
@@ -120,6 +132,7 @@ export function publicAi() {
       keySource: storedAiKey() ? "app" : config.ai.apiKey ? "env" : null,
     },
     roles: loadRoles(),
+    voiceEngine: getVoiceEngine(),
     voices: VOICES,
     formats: FORMATS,
   };
@@ -164,7 +177,7 @@ export function saveRoles(input) {
     }
     next[role] = { model: r.model.trim() };
     if (role === "tts") {
-      next[role].voice = VOICES.includes(r.voice) ? r.voice : "alloy";
+      next[role].voice = VOICES.includes(r.voice) ? r.voice : "marin";
       next[role].format = "wav";
     }
   }

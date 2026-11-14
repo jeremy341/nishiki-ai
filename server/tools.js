@@ -25,6 +25,13 @@ const NEEDS_EXA = new Set(["web_search", "read_web_page"]);
 // ctx: { userId, conversationId, googleConnected, attachmentIds: [], actionIds: [] }
 
 const LOCAL_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
+// Models write times in several ways: with seconds, with a space instead of the T, with a Z or an offset.
+// All of them mean the local time the person said, so they are cut down to YYYY-MM-DDTHH:mm.
+function normalizeLocalTime(value) {
+  const m = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?$/.exec(String(value || "").trim());
+  return m ? `${m[1]}T${m[2]}` : String(value || "");
+}
 const PRIVATE_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.|\[?::1\]?|.*\.local$|.*\.internal$)/i;
 
 const SPECS = [
@@ -425,46 +432,13 @@ function allowedSpec(spec, ctx) {
   return true;
 }
 
-// Tool definitions cost tokens on every request (about 3,200 for all of them). So only the tools that
-// the recent messages could need are sent. A tool whose words never come up is simply not offered.
-const ALWAYS = new Set(["web_search"]);
-const ROUTES = [
-  [["get_time"], /uhrzeit|wie sp(ä|ae)t|what time|datum|\bdate\b|zeitzone|time zone/i],
-  [["read_web_page"], /https?:|www\.|\.(com|de|org|net|io)\b|webseite|website|seite|link|artikel|article|page/i],
-  [["calendar_upcoming", "calendar_add"], /kalender|termin|calendar|event|meeting|besprechung|verabred|appointment|woche|week|morgen|tomorrow|heute|today|frei|free/i],
-  [["create_pdf"], /pdf|dokument|document|bericht|report|zusammenfassung als/i],
-  [["create_presentation"], /pr(ä|ae)sentation|presentation|folien|slides?|powerpoint|pptx|deck/i],
-  [["save_note", "list_notes", "delete_note"], /notiz|notes?\b|aufschreib|schreib.{0,20}auf|festhalten/i],
-  [["remember", "forget"], /merk|erinner|remember|vergiss|forget|speicher|memory|ged(ä|ae)chtnis|ab jetzt|from now on/i],
-  [["search_past_chats"], /letzte|damals|fr(ü|ue)her|vorher|besprochen|gesagt|chat|past|earlier|previous|last time|erinnerst|talked|haben wir|hatten wir|schon mal/i],
-  [["mail_recent"], /mail|post\b|inbox|posteingang|nachricht|message/i],
-  [["gmail_search", "gmail_send"], /gmail|mail|nachricht|message|schreib/i],
-  [["show_widget"], /diagramm|chart|graph|tabelle|table|vergleich|compare|statistik|stats|karten|cards|(ü|ue)bersicht|liste|list|visual|plot|zahlen|numbers|widget|zeig|show|kurve|balken|torte|pie|trend|verlauf/i],
-  [["weather_forecast"], /wetter|weather|regen|rain|temperatur|temperature|forecast|vorhersage|sonne|sun|schnee|snow|wind|grad\b|warm|kalt|cold/i],
-  [["convert_currency"], /w(ä|ae)hrung|currency|euro|dollar|usd|eur|chf|gbp|yen|jpy|umrechn|convert|wechselkurs|exchange rate|kurs|[$€£]/i],
-  [["wikipedia_summary"], /wiki|wer (war|ist)|who (is|was)|was ist|what is|biograph|erkl(ä|ae)r|explain|bedeutet|meaning/i],
-  [["find_place", "route_distance"], /karte|map|route|weg\b|entfern|distance|wo ist|where|restaurant|caf(é|e)|nearby|n(ä|ae)he|adresse|address|fahr|drive|km\b|ort\b|place|bahn|bus|zug|train|laufen|walk/i],
-  [["drive_search"], /drive|datei|files?\b|dokument|document|ordner|folder/i],
-  [["todoist_tasks", "todoist_add_task"], /todoist|aufgabe|task|to-?do|erledigen/i],
-  [["github_inbox"], /github|issue|pull request|\bpr\b|repo|commit/i],
-  [["notion_search"], /notion/i],
-  [["schedule_task", "set_reminder"], /erinner|remind|reminder|aufgabe|task|\buhr\b|\d{1,2}[:.]\d{2}|o'clock|morgen|tomorrow|(ü|ue)bermorgen|heute (abend|nacht)|tonight|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|monday|tuesday|wednesday|thursday|friday|saturday|sunday|t(ä|ae)glich|daily|jeden|jede\b|every|w(ö|oe)chentlich|weekly|\bum \d|\bat \d|timer|wecker|alarm|plan|schedule|sp(ä|ae)ter|later|in \d+ (min|stund|hour|tag|day)/i],
-];
-
-export function routedNames(text) {
-  const names = new Set(ALWAYS);
-  for (const [list, pattern] of ROUTES) {
-    if (pattern.test(text)) for (const name of list) names.add(name);
-  }
-  return names;
-}
-
-// Everything the model may call: built-in tools plus the connectors the user switched on.
-// ctx.routeText: the latest messages. Without it every allowed tool is offered.
+// Everything the model may call: built-in tools plus the connectors the user switched on. All of them are
+// always offered, so the model can work out what is wanted from the context ("ich muss morgen zum Zahnarzt")
+// instead of from certain words. The list never changes between requests, so the provider caches it, which
+// keeps it cheap and fast. get_time is left out: every prompt already carries the time.
 export function toolSpecs(ctx) {
-  const routed = typeof ctx.routeText === "string" ? routedNames(ctx.routeText) : null;
   const builtIn = SPECS
-    .filter((spec) => allowedSpec(spec, ctx) && (!routed || routed.has(spec.name)))
+    .filter((spec) => spec.name !== "get_time" && allowedSpec(spec, ctx))
     .map((spec) => ({
       type: "function",
       function: { name: spec.name, description: spec.description, parameters: spec.parameters },
@@ -627,7 +601,8 @@ const HANDLERS = {
 
   async calendar_add(args, ctx) {
     const title = requireString(args.title, "title", 200);
-    const { start, end } = args;
+    const start = normalizeLocalTime(args.start);
+    const end = normalizeLocalTime(args.end);
     if (!LOCAL_TIME.test(start) || !LOCAL_TIME.test(end) || end <= start) {
       throw new AppError(400, "Use local start and end times in the form YYYY-MM-DDTHH:mm, with end after start.");
     }
@@ -651,6 +626,7 @@ const HANDLERS = {
 
   async set_reminder(args, ctx) {
     const text = requireString(args.text, "text", 300);
+    args.run_at = normalizeLocalTime(args.run_at);
     const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(args.run_at || "");
     if (!m) throw new AppError(400, "For a reminder, give run_at as YYYY-MM-DDTHH:mm.");
     const input = {
@@ -675,6 +651,7 @@ const HANDLERS = {
     const input = { title, prompt, mode: args.mode, tz: config.timezone };
     let details;
     if (args.mode === "once") {
+      args.run_at = normalizeLocalTime(args.run_at);
       const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(args.run_at || "");
       if (!m) throw new AppError(400, "For a one-time task, give run_at as YYYY-MM-DDTHH:mm.");
       input.runAt = zonedToUtc(Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4]), Number(m[5]), config.timezone);

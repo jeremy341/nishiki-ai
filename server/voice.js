@@ -1,11 +1,11 @@
-import { recordUsage } from "./ai.js";
+import { callModel, recordUsage } from "./ai.js";
 import { answerConversation, titleFrom } from "./answer.js";
 import { config } from "./config.js";
 import { db } from "./db.js";
 import { AppError } from "./errors.js";
 import { memoryBlock } from "./memory.js";
 import { assistantName, getFeatures, getPrefs } from "./prefs.js";
-import { resolveRole, roleConfigured } from "./providers.js";
+import { getVoiceEngine, resolveRole, roleConfigured } from "./providers.js";
 import { learnFromChat } from "./recall.js";
 import { localNow } from "./tools.js";
 import { serverTtsConfigured, synthesizePcm } from "./tts.js";
@@ -26,15 +26,15 @@ import { transcribe } from "./transcribe.js";
 //   { type: "handoff" }       the full assistant is working on it
 
 const NO_SPEECH_TEXT = "(Sprachnachricht)";
-const HISTORY_MESSAGES = 8;
-const HISTORY_CHARS = 700;
+const HISTORY_MESSAGES = 4; // the audio model charges six times what a text model does for what it reads
+const HISTORY_CHARS = 300;
 
 const ASK_ASSISTANT = {
   type: "function",
   function: {
     name: "ask_assistant",
-    description: "Hands the request to the full assistant, which has the calendar, reminders, tasks, notes, mail, web search, weather, files and memory. "
-      + "Use it for anything that needs current facts or the user's own data, and for every action. Not for small talk or general knowledge you are sure about.",
+    description: "Hands the request to the full assistant, which has the calendar, reminders, tasks, notes, mail, web search, weather, files, memory and charts. "
+      + "Use it for everything except small talk, feelings and simple everyday questions. When in doubt, use it.",
     parameters: {
       type: "object",
       properties: {
@@ -50,6 +50,11 @@ export function liveVoiceAvailable() {
   return config.voice.live && serverTtsConfigured() && roleConfigured("tts");
 }
 
+// The lane needs an audio-in model for the "stt" job (Voxtral Small by default) and a voice to speak with.
+function laneAvailable() {
+  return config.voice.live && serverTtsConfigured() && roleConfigured("stt");
+}
+
 function languageRule(prefs) {
   if (prefs.language === "de") return "Sprich immer Deutsch.";
   if (prefs.language === "en") return "Always speak English.";
@@ -58,23 +63,22 @@ function languageRule(prefs) {
     : "Sprich die Sprache, die der Mensch spricht. Wenn es unklar ist, sprich Deutsch. Wechsle nie von selbst ins Englische.";
 }
 
-function voiceSystem(userId) {
+function voiceSystem(userId, { writes = false } = {}) {
   const prefs = getPrefs(userId);
   const features = getFeatures(userId);
   const lines = [
-    `Du bist ${assistantName()}, ein warmer, lockerer Sprachassistent für einen einzelnen Menschen, und du führst ein echtes Gespräch.`,
-    "- Sprich ruhig und natürlich, mit lebendigem Rhythmus und kurzen Sätzen, ein bisschen wie ein Freund, der gut zuhört. Kleine Wörter wie \"hm\", \"ach so\" oder \"klar\" sind erlaubt, wenn sie echt klingen.",
-    "- Antworte in der Regel mit ein bis zwei kurzen Sätzen. Nur wenn der Mensch ausdrücklich mehr will, werde ausführlicher.",
-    "- Keine Listen, keine Formatierung, keine Emojis, keine langen Zahlenreihen.",
-    `- ${languageRule(prefs)}`,
-    "- Für Aktuelles (Wetter, Nachrichten, Preise, Sport), für persönliche Daten (Kalender, Mails, Notizen, Erinnerungen, Aufgaben, Dateien), für jede Aktion (Erinnerung, Aufgabe, Termin, Mail) und für Suchen rufst du sofort ask_assistant auf und sagst davor nichts.",
-    "- Bist du bei einer Tatsache nicht sicher, rufe ask_assistant auf, statt zu raten. Erwähne nie Werkzeuge oder wie du etwas herausfindest.",
+    `Du bist ${assistantName()}, ein warmer, lockerer Sprachassistent und führst ein echtes Gespräch mit einem Menschen.`,
+    writes
+      ? "Schreibe so, wie man spricht: ruhig, natürlich, kurze Sätze, wie ein Freund. Deine Antwort wird vorgelesen. Antworte mit ein bis zwei Sätzen, nur auf Wunsch länger. Keine Listen, keine Emojis, keine Sonderzeichen."
+      : "Sprich ruhig, natürlich und in kurzen Sätzen, wie ein Freund. Antworte mit ein bis zwei Sätzen, nur auf Wunsch länger. Keine Listen, keine Emojis.",
+    languageRule(prefs),
+    "Du antwortest NUR bei Smalltalk, Gefühlen und einfachen Alltagsfragen selbst. Bei allem anderen rufst du sofort ask_assistant auf und sagst davor nichts: Aktuelles, Wetter, Nachrichten, Termine, Pläne und Vorhaben (auch wenn der Mensch nur sagt, was er vorhat, etwa \"ich muss morgen zum Zahnarzt\"), Erinnerungen, Aufgaben, Notizen, Mails, Dateien, Zahlen und Vergleiche, Suchen und jede Aktion. Im Zweifel: ask_assistant. Erwähne nie Werkzeuge.",
   ];
-  if (prefs.personality === "concise") lines.push("- Fasse dich besonders kurz.");
-  if (prefs.personality === "detailed") lines.push("- Erkläre gern etwas genauer, aber bleib im Gesprächston.");
-  if (prefs.customInstructions.trim()) lines.push(`Eigene Wünsche des Menschen:\n${prefs.customInstructions.trim()}`);
+  if (prefs.personality === "concise") lines.push("Fasse dich besonders kurz.");
+  if (prefs.personality === "detailed") lines.push("Erkläre gern etwas genauer, aber bleib im Gesprächston.");
+  if (prefs.customInstructions.trim()) lines.push(`Wünsche des Menschen: ${prefs.customInstructions.trim().slice(0, 500)}`);
   const memory = features.memory && prefs.memory ? memoryBlock(userId) : "";
-  if (memory) lines.push(memory);
+  if (memory) lines.push(memory.slice(0, 600));
   lines.push(`Jetzt: ${localNow()}.`);
   return lines.join("\n");
 }
@@ -131,7 +135,7 @@ async function liveCall({ userId, conversationId, wav, voice, emit }) {
         audio: { voice: voice || r.voice || "alloy", format: "pcm16" },
         stream: true,
         stream_options: { include_usage: true },
-        max_tokens: 500,
+        max_tokens: 260, // about 13 seconds of speech: spoken answers are short, and audio output is the dearest part
         tools: [ASK_ASSISTANT],
         tool_choice: "auto",
         messages,
@@ -208,6 +212,49 @@ async function liveCall({ userId, conversationId, wav, voice, emit }) {
   return { handoff: false, request: "", transcript, spoke: true };
 }
 
+// Lane: the model for the "stt" job (it takes audio and writes text) hears the recording and either answers
+// in a sentence or two, which is spoken as it is written, or hands the request to the full assistant.
+async function laneCall({ userId, conversationId, wav, voice, emit }) {
+  const speaker = createSpeaker({ userId, voice, emit });
+  const messages = [
+    { role: "system", content: voiceSystem(userId, { writes: true }) },
+    ...history(conversationId),
+    { role: "user", content: [{ type: "input_audio", input_audio: { data: wav, format: "wav" } }] },
+  ];
+  let streamed = false;
+  const message = await callModel(messages, {
+    role: "stt", userId, tools: [ASK_ASSISTANT], maxTokens: 220, temperature: 0.6,
+    onText: (text) => {
+      streamed = true;
+      speaker.feed(text);
+      emit({ type: "reply", text });
+    },
+  });
+  const call = (message.tool_calls || []).find((c) => c.function?.name === "ask_assistant");
+  if (call) {
+    let request = "";
+    try {
+      request = String(JSON.parse(call.function.arguments || "{}").request || "").trim();
+    } catch {
+      request = "";
+    }
+    const spoke = (await speaker.finish().catch(() => 0)) > 0;
+    return { handoff: true, request, transcript: "", spoke };
+  }
+  const text = String(message.content || "").trim();
+  if (!text) throw new AppError(502, "The assistant had nothing to say.");
+  let spoken = await speaker.finish().catch(() => 0);
+  if (!spoken) {
+    // The words did not stream (the provider sent them in one piece) or the voice refused them: say them now.
+    const again = createSpeaker({ userId, voice, emit });
+    if (!streamed) emit({ type: "reply", text });
+    again.feed(text);
+    spoken = await again.finish().catch(() => 0);
+  }
+  if (!spoken) throw new AppError(502, "The voice service could not read the answer.");
+  return { handoff: false, request: "", transcript: text, spoke: true };
+}
+
 const debug = (...args) => { if (process.env.VOICE_DEBUG) console.log("[voice]", ...args); };
 
 function emitPcm(emit, pcm) {
@@ -221,7 +268,6 @@ const cleanForSpeech = (text) => String(text).replace(/[*_`#>]+/g, "").replace(/
 // Reads an answer aloud while it is still being written: each finished sentence goes to the voice at once,
 // and the audio is sent in order. Nothing wrong is ever said (see tts.js); a sentence the voice refuses is left out.
 function createSpeaker({ userId, voice, emit }) {
-  const MIN_PIECE = 30;
   const MAX_PIECES = 12;
   let pending = "";
   let count = 0;
@@ -247,7 +293,8 @@ function createSpeaker({ userId, voice, emit }) {
     let match;
     while ((match = boundary.exec(pending))) {
       const end = match.index + match[0].length;
-      if (pending.slice(last, end).trim().length >= MIN_PIECE) {
+      // The first sentence goes out as soon as it is a few words long, so sound starts early.
+      if (pending.slice(last, end).trim().length >= (count === 0 ? 18 : 30)) {
         addPiece(pending.slice(last, end));
         last = end;
       }
@@ -369,12 +416,18 @@ export async function runVoiceTurn({ userId, conversationId, wav, emit }) {
     return text;
   });
 
+  // The chosen engine first; if it fails before anything was said, the other one; then the slow way.
   let live = null;
-  if (liveVoiceAvailable()) {
+  const engines = getVoiceEngine() === "lane" ? ["lane", "live"] : ["live", "lane"];
+  for (const engine of engines) {
+    if (live) break;
+    if (engine === "live" ? !liveVoiceAvailable() : !laneAvailable()) continue;
     try {
-      live = await liveCall({ userId, conversationId, wav, voice, emit });
+      live = engine === "live"
+        ? await liveCall({ userId, conversationId, wav, voice, emit })
+        : await laneCall({ userId, conversationId, wav, voice, emit });
     } catch (error) {
-      console.warn("Fast voice failed, using the slow way:", error.message);
+      console.warn(`Voice engine "${engine}" failed:`, error.message);
     }
   }
 
