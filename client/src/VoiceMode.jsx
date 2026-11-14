@@ -1,17 +1,19 @@
 import { t } from "./i18n/index.js";
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import OrbView from "./OrbView.jsx";
 import KoiStage from "./ui/KoiStage.jsx";
 import { squares } from "@yogesharc/thinking-orbs/renders";
 import { canRecord, startRecording } from "./recorder.js";
 import { createPcmPlayer, hasPlaybackMeter, playbackLevel, stopSpeaking, unlockSpeech } from "./speech.js";
-import { Button, IconButton } from "./ui/ui.jsx";
+import { Button, IconButton, useDialogReturnFocus } from "./ui/ui.jsx";
 
 // Full-screen conversation: listen -> (one call listens and answers, speech streams back) -> listen again.
 // Tap the orb to pause listening, or to stop the reply while it is speaking.
 // turn(wav, { onAudio, onHeard, onReply }) sends one recording and resolves when the answer is saved.
 export default function VoiceMode({ onClose, turn }) {
+  const returnFocus = useDialogReturnFocus();
   const [phase, setPhase] = useState("starting"); // starting | listening | transcribing | thinking | speaking | paused | error
   const [heard, setHeard] = useState("");
   const [said, setSaid] = useState("");
@@ -208,6 +210,8 @@ export default function VoiceMode({ onClose, turn }) {
   const busyPhase = phase === "starting" || phase === "transcribing" || phase === "thinking";
 
   return (
+    <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) { stopAll(); onClose(); } }}>
+    <DialogPrimitive.Content asChild aria-describedby={undefined} {...returnFocus} onInteractOutside={(event) => event.preventDefault()}>
     <div
       role="dialog"
       aria-modal="true"
@@ -215,6 +219,7 @@ export default function VoiceMode({ onClose, turn }) {
       className="fixed inset-0 z-[60] flex flex-col bg-canvas pb-[max(20px,env(safe-area-inset-bottom))] pt-[max(8px,env(safe-area-inset-top))] animate-enter"
     >
       <header className="flex items-center justify-between px-4">
+        <DialogPrimitive.Title className="sr-only">{t("Conversation mode")}</DialogPrimitive.Title>
         <span className="pl-2 font-mono text-[11px] uppercase tracking-[0.14em] text-fg-subtle" aria-live="polite">{label && t(label)}</span>
         <IconButton label={t("End conversation")} onClick={() => { stopAll(); onClose(); }} className="size-11">
           <X size={20} aria-hidden="true" />
@@ -247,6 +252,8 @@ export default function VoiceMode({ onClose, turn }) {
         {hint && <p className="text-sm text-fg-subtle">{t(hint)}</p>}
       </div>
     </div>
+    </DialogPrimitive.Content>
+    </DialogPrimitive.Root>
   );
 }
 

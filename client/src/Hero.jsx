@@ -6,6 +6,7 @@ import { Button } from "./ui/ui.jsx";
 import OrbView from "./OrbView.jsx";
 import PixelField from "./ui/PixelField.jsx";
 import { useStyle } from "./style.js";
+import { effectiveTheme } from "./theme.js";
 
 // The first screen: the koi pond with the assistant's name written in it, and a button to sign in.
 // While the session loads, the same pond shows without the button.
@@ -25,7 +26,7 @@ function KoiHero({ name, onSignIn, loading }) {
   const pondRef = useRef(null);
   const boxRef = useRef(null);
   const wordRef = useRef(null);
-  const theme = prefers("(prefers-color-scheme: light)") ? "light" : "pond";
+  const theme = effectiveTheme() === "light" ? "light" : "pond";
 
   useEffect(() => {
     const { createPond, AsciiMark } = window.AsciiKoi;

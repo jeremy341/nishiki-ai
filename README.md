@@ -1,5 +1,7 @@
 # Friend AI
 
+The look of the app (the koi pond, paper and ink, vermilion) is defined in [DESIGN.md](DESIGN.md).
+
 A small, login-protected personal assistant web app. You create a login for your friend, he signs in on his phone, connects his own Google Calendar, and talks to an AI by typing or speaking. The AI can read it back out loud, and an animated thinking orb shows what it is doing.
 
 - **Login:** invite-only, up to five people. The admin sends an invite link; the person chooses their username and password. Passwords are stored as scrypt hashes.
@@ -275,11 +277,17 @@ Assumes Ubuntu/Debian, a domain pointing at the server, and ports 80/443 open. T
 
 ```bash
 # on the server
+
+The look of the app (the koi pond, paper and ink, vermilion) is defined in [DESIGN.md](DESIGN.md).
 sudo useradd --system --home /opt/friend-ai --shell /usr/sbin/nologin friendai
 sudo mkdir -p /opt/friend-ai && sudo chown -R "$USER": /opt/friend-ai
 # Node 22.13+ (e.g. from NodeSource or nvm), Caddy from https://caddyserver.com/docs/install
+
+The look of the app (the koi pond, paper and ink, vermilion) is defined in [DESIGN.md](DESIGN.md).
 cd /opt/friend-ai
 # copy the project here (git clone, scp, or rsync), then:
+
+The look of the app (the koi pond, paper and ink, vermilion) is defined in [DESIGN.md](DESIGN.md).
 npm ci && npm run build
 cp .env.example .env && nano .env   # set PUBLIC_URL=https://your-domain, keys, ENCRYPTION_KEY, HOST=127.0.0.1
 npm run user:add -- AB
@@ -314,6 +322,8 @@ On an iPhone: open the HTTPS address in Safari, sign in, then Share → **Add to
 ```bash
 sudo systemctl stop friend-ai
 # copy the new code in (keep .env and data/), then:
+
+The look of the app (the koi pond, paper and ink, vermilion) is defined in [DESIGN.md](DESIGN.md).
 npm ci && npm run build
 sudo systemctl start friend-ai
 ```

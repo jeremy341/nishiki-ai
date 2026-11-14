@@ -1,6 +1,14 @@
 // German translations of the interface text. The key is the English text, so the English
 // interface needs no entry here.
 const de = {
+  "Delete memory: {text}": "Erinnerung löschen: {text}",
+  "Deleted {count} memory": "{count} Erinnerung gelöscht",
+  "Deleted {count} memories": "{count} Erinnerungen gelöscht",
+  "Skip to chat": "Zum Chat springen",
+  "Account: {name}": "Konto: {name}",
+  "Signed in as {name}": "Angemeldet als {name}",
+  "No files match this filter.": "Keine Dateien für diesen Filter.",
+  "{width} pixels": "{width} Pixel",
   "New chat": "Neuer Chat",
   "Settings": "Einstellungen",
   "Rename": "Umbenennen",

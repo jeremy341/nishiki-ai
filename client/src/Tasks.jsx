@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "./api.js";
 import { currentLocale, t } from "./i18n/index.js";
+import KoiEmpty from "./ui/KoiEmpty.jsx";
+import KoiGlyph from "./ui/KoiGlyph.jsx";
 import { Button, Field, FullPage, IconButton, Input, Modal, Select, Sheet, Switch } from "./ui/ui.jsx";
 
 // Scheduled tasks: a question that the assistant answers by itself, once, every day or every week.
@@ -82,7 +84,7 @@ function TaskForm({ task, onClose, onSaved }) {
       </Field>
       <Field label={t("What should the assistant do?")} hint={t("Written as if you asked it yourself.")}>
         <textarea
-          className="min-h-24 w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-base md:text-sm focus:border-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/10"
+          className="min-h-24 w-full resize-y rounded-md border border-border bg-surface px-3 py-2 text-base md:text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25"
           value={form.prompt}
           maxLength={2000}
           required
@@ -175,41 +177,42 @@ export default function Tasks({ onClose, onOpenChat }) {
     <FullPage title={t("Scheduled tasks")} onClose={onClose}>
       <div className="grid gap-5">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-sm text-fg-muted">{t("The assistant answers these by itself, in their own chat.")}</p>
+          <p className="caption normal-case">{t("The assistant answers these by itself, in their own chat.")}</p>
           <Button variant="primary" className="shrink-0 whitespace-nowrap max-md:h-11" onClick={() => setEditing({})}><Plus size={16} aria-hidden="true" /> {t("New task")}</Button>
         </div>
 
         {error && <p role="alert" className="rounded-md border border-danger/30 px-3 py-2 text-sm text-danger">{error}</p>}
 
         {tasks === null && !error && (
-          <div className="divide-y divide-border overflow-hidden rounded-lg border border-border" aria-busy="true">
-            {[0, 1].map((i) => <div key={i} className="h-24 animate-pulse bg-raised/40" />)}
+          <div role="status" aria-busy="true" className="flex items-center gap-3 py-10">
+            <KoiGlyph swim size={32} />
+            <span className="caption">{t("Loading…")}</span>
           </div>
         )}
 
         {tasks && !tasks.length && (
-          <div className="grid gap-1 rounded-lg border border-dashed border-border px-6 py-10 text-center">
-            <p className="text-sm font-medium">{t("No scheduled tasks yet")}</p>
-            <p className="mx-auto max-w-[40ch] text-sm text-fg-muted">{t("For example: every weekday at 8:00, a short summary of my calendar and mail.")}</p>
-          </div>
+          <KoiEmpty
+            title={t("No scheduled tasks yet")}
+            hint={t("For example: every weekday at 8:00, a short summary of my calendar and mail.")}
+          />
         )}
 
         {tasks?.length > 0 && (
-          <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+          <ul className="divide-y divide-border border-y border-border">
             {tasks.map((task) => (
-              <li key={task.id} className="grid gap-2 px-4 py-3">
+              <li key={task.id} className="grid gap-2 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className={`truncate text-sm font-medium ${task.enabled ? "" : "text-fg-muted"}`}>{task.title}</div>
-                    <div className="mt-0.5 text-[13px] text-fg-muted">{scheduleText(task)}</div>
+                    <div className="caption mt-0.5 tabular-nums">{scheduleText(task)}</div>
                   </div>
                   <Switch checked={task.enabled} onCheckedChange={(v) => toggle(task, v)} label={t("On")} />
                 </div>
                 <p className="line-clamp-2 text-[13px] text-fg-muted">{task.prompt}</p>
-                <div className="grid gap-0.5 font-mono text-[11px] text-fg-subtle">
-                  {task.enabled && task.nextRun && <span>{t("Next: {when}", { when: whenText(task.nextRun) })}</span>}
+                <div className="caption grid gap-0.5 tabular-nums">
+                  {task.enabled && task.nextRun && <span className="text-accent">{t("Next: {when}", { when: whenText(task.nextRun) })}</span>}
                   {task.lastRun && <span>{t("Last ran {when}", { when: whenText(task.lastRun) })}</span>}
-                  {task.lastError && <span className="text-danger">{task.lastError}</span>}
+                  {task.lastError && <span className="normal-case text-danger">{task.lastError}</span>}
                 </div>
                 <div className="-mb-1 flex flex-wrap items-center gap-1">
                   <Button size="sm" onClick={() => runNow(task)} className="max-md:h-11"><Play size={13} aria-hidden="true" /> {t("Run now")}</Button>

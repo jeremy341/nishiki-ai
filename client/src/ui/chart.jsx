@@ -19,8 +19,8 @@ export function ChartContainer({ config, className = "", children }) {
 export function ChartTooltipContent({ active, payload, label, config = {}, hideLabel = false }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="grid min-w-[8rem] gap-1.5 rounded-lg border border-border bg-overlay px-3 py-2 text-xs text-fg shadow-md">
-      {!hideLabel && label !== undefined && <div className="font-medium">{label}</div>}
+    <div className="grid min-w-[8rem] gap-1.5 rounded-lg border border-border-strong bg-overlay px-3 py-2 font-mono text-xs text-fg">
+      {!hideLabel && label !== undefined && <div className="caption normal-case">{label}</div>}
       {payload.map((item) => {
         const entry = config[item.dataKey] || config[item.name] || {};
         return (
@@ -39,7 +39,7 @@ export function ChartTooltipContent({ active, payload, label, config = {}, hideL
 export function ChartLegendContent({ payload = [], config = {} }) {
   if (!payload.length) return null;
   return (
-    <div className="flex flex-wrap items-center justify-center gap-4 pt-2 text-xs text-fg-muted">
+    <div className="flex flex-wrap items-center justify-center gap-4 pt-2 font-mono text-[11px] tracking-[0.06em] text-fg-muted">
       {payload.map((item) => {
         const entry = config[item.dataKey] || config[item.value] || {};
         return (

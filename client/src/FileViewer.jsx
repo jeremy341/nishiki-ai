@@ -1,12 +1,24 @@
-import Loading from "./ui/Loading.jsx";
 import { Download, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { toast } from "sonner";
 import { api } from "./api.js";
 import { t } from "./i18n/index.js";
 import Answer from "./ui/Answer.jsx";
 import { useEdgeBack } from "./ui/edgeBack.js";
-import { Button, IconButton } from "./ui/ui.jsx";
+import KoiEmpty from "./ui/KoiEmpty.jsx";
+import KoiGlyph from "./ui/KoiGlyph.jsx";
+import { Button, IconButton, useDialogReturnFocus } from "./ui/ui.jsx";
+
+// The koi swimming in place and a lowercase word, while a file opens.
+function ViewerLoading() {
+  return (
+    <div role="status" aria-live="polite" className="flex items-center gap-3 px-4 py-10">
+      <KoiGlyph swim size={32} />
+      <span className="caption">{t("Loading…")}</span>
+    </div>
+  );
+}
 
 // Opens a photo, PDF, Word, CSV or text file next to the chat on a tablet, and full screen on a phone.
 // PDFs are drawn page by page with pdf.js, which also works on iPhone and iPad Safari.
@@ -66,8 +78,8 @@ function PdfPages({ id }) {
 
   return (
     <div className="px-3 py-4">
-      {status === "loading" && <Loading rows={4} />}
-      {status === "error" && <p className="py-10 text-center text-sm text-danger">{t("The file could not be shown.")}</p>}
+      {status === "loading" && <ViewerLoading />}
+      {status === "error" && <p role="alert" className="py-10 text-center font-mono text-[13px] text-danger">{t("The file could not be shown.")}</p>}
       <div ref={container} />
     </div>
   );
@@ -117,7 +129,7 @@ export function parseCsv(text) {
 // A PowerPoint file: the server gives "Folie N:" followed by the lines of each slide.
 function SlideCards({ text }) {
   const slides = text.split(/^Folie \d+:\n?/m).slice(1).map((part) => part.split("\n").filter((l) => l.trim()));
-  if (!slides.length) return <p className="py-10 text-center text-sm text-fg-muted">{t("No text on the slides.")}</p>;
+  if (!slides.length) return <KoiEmpty title={t("No text on the slides.")} />;
   return (
     <div className="grid gap-4 p-4">
       {slides.map((lines, i) => (
@@ -149,8 +161,8 @@ function TextFile({ id, kind, name }) {
     return () => { alive = false; };
   }, [id]);
 
-  if (state.status === "loading") return <Loading rows={4} />;
-  if (state.status === "error") return <p className="py-10 text-center text-sm text-danger">{t("The file could not be shown.")}</p>;
+  if (state.status === "loading") return <ViewerLoading />;
+  if (state.status === "error") return <p role="alert" className="py-10 text-center font-mono text-[13px] text-danger">{t("The file could not be shown.")}</p>;
 
   if (kind === "csv") {
     const rows = parseCsv(state.text);
@@ -161,7 +173,7 @@ function TextFile({ id, kind, name }) {
         <div className="overflow-auto rounded-lg border border-border bg-surface">
           <table className="w-full min-w-max border-collapse text-[13px]">
             <thead className="sticky top-0 z-10">
-              <tr>{head.map((c, i) => <th key={i} className="border-b border-border bg-raised px-3 py-2 text-left font-medium">{c}</th>)}</tr>
+              <tr>{head.map((c, i) => <th key={i} className="border-b border-border bg-raised px-3 py-2 text-left font-mono text-[12px] font-medium">{c}</th>)}</tr>
             </thead>
             <tbody>
               {body.map((r, i) => (
@@ -172,7 +184,7 @@ function TextFile({ id, kind, name }) {
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-xs text-fg-subtle">
+        <p className="caption mt-2 tabular-nums">
           {t("{rows} rows", { rows: Math.max(0, rows.length - 1) })}{rows.length > 1000 ? ` · ${t("first 1000 shown")}` : ""}
         </p>
       </div>
@@ -199,14 +211,41 @@ function TextFile({ id, kind, name }) {
 export default function FileViewer({ file, onClose, onConverted, onSummarized, width = 520, onResize, reserved = 0 }) {
   const [converting, setConverting] = useState(false);
   const rootRef = useRef(null);
+  const returnFocus = useDialogReturnFocus();
+  const [mobile, setMobile] = useState(() => window.matchMedia("(max-width: 767px)").matches);
   useEdgeBack(rootRef, onClose);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 767px)");
+    const update = () => setMobile(query.matches);
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (mobile) return undefined; // The mobile Radix dialog owns Escape.
+    const onKey = (event) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      // Radix handles Escape during capture. Also leave open dialogs and menus
+      // in charge if they deliberately keep themselves open without consuming it.
+      if (document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"], [role="menu"][data-state="open"]')) return;
+      event.preventDefault();
+      onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobile, onClose]);
+
+  const maxWidth = Math.max(320, window.innerWidth - reserved - 360);
+  function resizeTo(next) {
+    onResize?.(Math.round(Math.min(Math.max(next, 320), Math.max(320, window.innerWidth - reserved - 360))));
+  }
 
   // Drag the left edge to change the width. The chat keeps at least 360 px, and the sidebar space is reserved.
   function startResize(event) {
     event.preventDefault();
     const move = (e) => {
-      const max = Math.max(320, window.innerWidth - reserved - 360);
-      onResize?.(Math.round(Math.min(Math.max(window.innerWidth - e.clientX, 320), max)));
+      resizeTo(window.innerWidth - e.clientX);
     };
     const up = () => {
       window.removeEventListener("pointermove", move);
@@ -215,12 +254,6 @@ export default function FileViewer({ file, onClose, onConverted, onSummarized, w
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
   }
-
-  useEffect(() => {
-    const onKey = (event) => { if (event.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   // A Word file becomes a PDF, kept as a new file; the viewer then shows the PDF.
   async function saveAsPdf() {
@@ -253,9 +286,10 @@ export default function FileViewer({ file, onClose, onConverted, onSummarized, w
   const isImage = file.kind === "image" || file.mime?.startsWith("image/");
   const isPdf = file.kind === "pdf" || file.mime === "application/pdf";
   const isWord = file.kind === "docx";
-  return (
+  const viewer = (
     <section
       ref={rootRef}
+      role={mobile ? undefined : "region"}
       aria-label={file.name}
       style={{ "--viewer-w": `${width}px` }}
       className="fixed inset-0 z-50 flex flex-col bg-canvas pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] md:relative md:z-auto md:h-full md:w-[var(--viewer-w)] md:shrink-0 md:border-l md:border-border"
@@ -265,15 +299,26 @@ export default function FileViewer({ file, onClose, onConverted, onSummarized, w
           role="separator"
           aria-orientation="vertical"
           aria-label={t("Resize the viewer")}
+          tabIndex={0}
+          aria-valuemin={320}
+          aria-valuemax={maxWidth}
+          aria-valuenow={Math.min(Math.max(width, 320), maxWidth)}
+          aria-valuetext={t("{width} pixels", { width: Math.min(Math.max(width, 320), maxWidth) })}
           onPointerDown={startResize}
-          className="absolute inset-y-0 -left-1 z-10 hidden w-2 cursor-col-resize touch-none hover:bg-fg/10 md:block"
+          onKeyDown={(event) => {
+            const next = { ArrowLeft: width + 32, ArrowRight: width - 32, Home: 320, End: maxWidth }[event.key];
+            if (next === undefined) return;
+            event.preventDefault();
+            resizeTo(next);
+          }}
+          className="absolute inset-y-0 -left-1 z-10 hidden w-2 cursor-col-resize touch-none hover:bg-fg/10 focus-visible:bg-fg/10 focus-visible:outline-2 focus-visible:outline-accent md:block"
         />
       )}
       <header className="flex h-12 shrink-0 items-center gap-1 border-b border-border px-2">
         <IconButton label={t("Close")} onClick={onClose} className="size-11 md:size-9">
           <X size={18} aria-hidden="true" />
         </IconButton>
-        <span className="min-w-0 flex-1 truncate px-1 text-sm">{file.name}</span>
+        <DialogPrimitive.Title asChild><span className="min-w-0 flex-1 truncate px-1 font-mono text-[13px]">{file.name}</span></DialogPrimitive.Title>
         {canSummarise && (
           <Button size="sm" onClick={summarise} disabled={converting} className="max-md:h-11">
             {t("Summarise")}
@@ -303,5 +348,14 @@ export default function FileViewer({ file, onClose, onConverted, onSummarized, w
         {!isImage && !isPdf && <TextFile id={file.id} kind={file.kind} name={file.name} />}
       </div>
     </section>
+  );
+  return (
+    <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
+      {mobile ? (
+        <DialogPrimitive.Content asChild aria-describedby={undefined} {...returnFocus} onInteractOutside={(event) => event.preventDefault()}>
+          {viewer}
+        </DialogPrimitive.Content>
+      ) : viewer}
+    </DialogPrimitive.Root>
   );
 }

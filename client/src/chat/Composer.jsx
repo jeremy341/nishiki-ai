@@ -17,7 +17,7 @@ function RecordingBar({ levels, transcribing, onCancel, onStop, onSend }) {
       </IconButton>
       <div className="flex h-10 min-w-0 flex-1 items-center justify-center gap-[3px] overflow-hidden" aria-hidden="true">
         {transcribing ? (
-          <span className="text-sm text-fg-subtle">{t("Transcribing…")}</span>
+          <span className="caption">{t("Transcribing…")}</span>
         ) : padded.map((level, i) => (
           <span
             key={i}
@@ -33,7 +33,7 @@ function RecordingBar({ levels, transcribing, onCancel, onStop, onSend }) {
         label={t("Send recording")}
         onClick={onSend}
         disabled={transcribing}
-        className="size-11 !bg-accent !text-accent-fg hover:opacity-85"
+        className="size-11 !rounded-[6px] !bg-accent !text-accent-fg hover:opacity-85"
       >
         <ArrowUp size={18} aria-hidden="true" />
       </IconButton>
@@ -74,7 +74,7 @@ export default function Composer({
       className="mx-auto w-full max-w-3xl"
       onSubmit={(event) => { event.preventDefault(); onSend(); }}
     >
-      <div className="rounded-xl border border-border bg-surface transition-colors focus-within:border-fg-subtle">
+      <div className="rounded-xl border border-border bg-surface transition-[border-color,box-shadow] duration-150 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/25">
         {voiceActive && (
           <RecordingBar
             levels={levels}
@@ -90,7 +90,7 @@ export default function Composer({
             {files.map((f) => (
               <li
                 key={f.localId}
-                className={`relative flex w-40 shrink-0 items-center gap-2 rounded-md border bg-raised p-1.5 text-xs ${
+                className={`relative flex w-40 shrink-0 items-center gap-2 rounded-lg border bg-raised p-1.5 text-xs ${
                   f.status === "error" ? "border-danger/50" : "border-border"
                 }`}
               >
@@ -140,7 +140,7 @@ export default function Composer({
                   type="button"
                   aria-label={t("Add a photo or file")}
                   disabled={busy || attachFull}
-                  className="grid size-11 place-items-center rounded-md text-fg-muted transition-colors hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg disabled:opacity-40 md:size-9"
+                  className="pressable grid size-11 place-items-center rounded-md text-fg-muted hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg disabled:opacity-40 md:size-9"
                 >
                   <Plus size={18} aria-hidden="true" />
                 </button>
@@ -156,7 +156,7 @@ export default function Composer({
                 active={useCalendar}
                 onClick={onToggleCalendar}
                 aria-pressed={useCalendar}
-                className="size-11 font-mono text-[12px] font-medium md:size-9"
+                className="size-11 font-mono text-[12px] font-medium lowercase aria-pressed:text-accent md:size-9"
               >
                 {t("Cal")}
               </IconButton>
@@ -175,7 +175,7 @@ export default function Composer({
                   label={busy ? t("Sending") : t("Send")}
                   type="submit"
                   disabled={busy || !canSend}
-                  className="size-11 !bg-accent !text-accent-fg hover:opacity-85 disabled:opacity-40 md:size-9"
+                  className="size-11 !rounded-[6px] !bg-accent !text-accent-fg hover:opacity-85 disabled:opacity-40 md:size-9"
                 >
                   <ArrowUp size={16} aria-hidden="true" />
                 </IconButton>
@@ -184,7 +184,7 @@ export default function Composer({
           </div>
         )}
       </div>
-      <div className="mt-1.5 hidden justify-end px-1 font-mono text-[11px] text-fg-subtle md:flex">
+      <div className="caption mt-1.5 hidden justify-end px-1 md:flex">
         <span>{t("Enter to send · Shift+Enter for a new line")}</span>
       </div>
     </form>

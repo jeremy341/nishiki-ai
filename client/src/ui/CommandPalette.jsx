@@ -39,10 +39,10 @@ export default function CommandPalette({ open, onOpenChange, commands }) {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="motion-overlay fixed inset-0 z-50 bg-[var(--scrim)]" />
+        <DialogPrimitive.Overlay className="motion-overlay fixed inset-0 z-50 bg-scrim" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          className="motion-dialog fixed left-1/2 top-[12vh] z-50 w-[min(92vw,560px)] -translate-x-1/2 overflow-hidden rounded-[22px] border border-border bg-[var(--overlay)] shadow-2xl outline-none"
+          className="motion-dialog fixed left-1/2 top-[12vh] z-50 w-[min(92vw,560px)] -translate-x-1/2 overflow-hidden rounded-xl border border-border-strong bg-overlay outline-none"
         >
           <DialogPrimitive.Title className="sr-only">{t("Command palette")}</DialogPrimitive.Title>
           <input
@@ -56,7 +56,7 @@ export default function CommandPalette({ open, onOpenChange, commands }) {
             aria-expanded="true"
             aria-controls="command-list"
             aria-activedescendant={items[index] ? `command-${items[index].id}` : undefined}
-            className="w-full border-b border-border bg-transparent px-5 py-4 text-[16px] placeholder:text-fg-subtle focus:outline-none"
+            className="h-12 w-full border-b border-border bg-transparent px-4 text-[16px] placeholder:text-fg-subtle focus:outline-none focus-visible:border-accent"
           />
           <ul id="command-list" role="listbox" className="quiet-scroll max-h-[55vh] overflow-y-auto p-2">
             {items.map((c, i) => (
@@ -65,17 +65,17 @@ export default function CommandPalette({ open, onOpenChange, commands }) {
                   type="button"
                   onMouseEnter={() => setIndex(i)}
                   onClick={() => run(c)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] transition-colors ${
-                    i === index ? "bg-fg/10" : ""
+                  className={`flex min-h-9 w-full items-center gap-3 rounded-md px-3 py-1.5 text-left font-mono text-[13px] font-medium transition-colors pointer-coarse:min-h-11 ${
+                    i === index ? "bg-raised" : ""
                   }`}
                 >
                   {c.icon && <c.icon size={17} aria-hidden="true" className="shrink-0 text-fg-muted" />}
                   <span className="min-w-0 flex-1 truncate">{c.label}</span>
-                  {c.group && <span className="shrink-0 text-[12px] text-fg-subtle">{c.group}</span>}
+                  {c.group && <span className="caption shrink-0">{c.group}</span>}
                 </button>
               </li>
             ))}
-            {!items.length && <li className="px-3 py-8 text-center text-sm text-fg-muted">{t("Nothing found")}</li>}
+            {!items.length && <li className="px-3 py-8 text-center font-mono text-[13px] text-fg-muted">{t("Nothing found")}</li>}
           </ul>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

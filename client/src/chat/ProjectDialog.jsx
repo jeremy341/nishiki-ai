@@ -4,8 +4,9 @@ import { api } from "../api.js";
 import { t } from "../i18n/index.js";
 import { Button, Field, Input, Modal, Select } from "../ui/ui.jsx";
 
-const TEXTAREA = "w-full rounded-md border border-border bg-surface px-3 py-2 text-base md:text-sm "
-  + "placeholder:text-fg-subtle focus:border-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/10";
+const TEXTAREA = "w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-base md:text-sm "
+  + "placeholder:text-fg-subtle transition-colors hover:border-fg-subtle "
+  + "focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25";
 
 // Create or edit a project: a name, and instructions every chat in it follows.
 export function ProjectDialog({ project, onClose, onSaved }) {
@@ -49,7 +50,7 @@ export function ProjectDialog({ project, onClose, onSaved }) {
             onChange={(e) => setInstructions(e.target.value)}
           />
         </Field>
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 max-md:[&>button]:h-11">
           <Button onClick={onClose} disabled={busy}>{t("Cancel")}</Button>
           <Button variant="primary" type="submit" disabled={busy || !name.trim()}>{t("Save")}</Button>
         </div>
@@ -88,7 +89,7 @@ export function MoveDialog({ chat, projects, onClose, onMoved }) {
             {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </Select>
         </Field>
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 max-md:[&>button]:h-11">
           <Button onClick={onClose} disabled={busy}>{t("Cancel")}</Button>
           <Button variant="primary" type="submit" disabled={busy}>{t("Save")}</Button>
         </div>

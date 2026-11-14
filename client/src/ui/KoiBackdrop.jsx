@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { effectiveTheme } from "../theme.js";
 
 // The koi pond behind a whole page, as on the start screen. The page's content sits on top of it.
 // The pond looks the same on every page that uses it, so the look stays when the page changes.
@@ -32,12 +33,7 @@ export default function KoiBackdrop({ children }) {
     };
   }, []);
 
-  let light = false;
-  try {
-    light = window.matchMedia("(prefers-color-scheme: light)").matches;
-  } catch {
-    /* default: the dark pond */
-  }
+  const light = effectiveTheme() === "light";
 
   return (
     <div ref={wrap} className="koi-hero fixed inset-0 overflow-hidden" data-theme={light ? "light" : "pond"}>

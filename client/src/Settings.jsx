@@ -1,5 +1,9 @@
 import StyleSwitch from "./ui/StyleSwitch.jsx";
 import Loading from "./ui/Loading.jsx";
+import PondWindow from "./ui/PondWindow.jsx";
+import WaveRule from "./ui/WaveRule.jsx";
+import KoiEmpty from "./ui/KoiEmpty.jsx";
+import KoiGlyph from "./ui/KoiGlyph.jsx";
 import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -15,15 +19,15 @@ import {
 // Settings is a full page, like the ChatGPT app: a grouped list, and each section opens
 // on its own page with a back arrow. Everything here is saved on the server.
 const SECTIONS = [
-  { value: "account", label: "Account" },
-  { value: "appearance", label: "Appearance" },
-  { value: "personal", label: "Personalisation" },
-  { value: "voice", label: "Voice" },
+  { value: "account", label: "Account", note: "Your name, password and signed-in devices." },
+  { value: "appearance", label: "Appearance", note: "Language and theme of the app." },
+  { value: "personal", label: "Personalisation", note: "How the assistant answers you." },
+  { value: "voice", label: "Voice", note: "How replies sound." },
   { value: "apps", label: "Apps" },
   { value: "memory", label: "Memory" },
   { value: "mail", label: "Mail and notifications" },
   { value: "usage", label: "Usage" },
-  { value: "data", label: "Data controls" },
+  { value: "data", label: "Data controls", note: "Export or delete what is stored about you." },
 ];
 
 // Like ChatGPT and Claude: on wide screens a navigation column in groups on the left, the page on the right.
@@ -50,7 +54,7 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
     <nav aria-label={t("Settings")} className="grid gap-6">
       {groups.map((group) => (
         <div key={group.label} className="grid gap-0.5">
-          <div className={`${CAPTION} px-2.5 pb-1.5`}>{group.label}</div>
+          <div className="caption px-3 pb-1.5">{group.label}</div>
           {group.items.map((value) => {
             const s = allSections.find((x) => x.value === value);
             if (!s) return null;
@@ -61,21 +65,22 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
                 type="button"
                 aria-current={selected ? "page" : undefined}
                 onClick={() => setPage(s.value)}
-                className={`flex h-8 w-full items-center rounded-md px-2.5 text-left text-[14px] transition-colors ${
+                className={`pressable relative flex h-9 w-full items-center overflow-hidden rounded-md px-3 text-left font-mono text-[13px] ${
                   selected ? "bg-raised font-medium text-fg" : "text-fg-muted hover:bg-raised/60 hover:text-fg"
                 }`}
               >
+                {selected && <span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 bg-accent" />}
                 <span className="truncate">{t(s.label)}</span>
               </button>
             );
           })}
         </div>
       ))}
-      <div className="border-t border-border pt-3">
+      <div className="border-t border-border pt-2">
         <button
           type="button"
           onClick={onSignOut}
-          className="flex h-8 w-full items-center rounded-md px-2.5 text-left text-[14px] text-danger transition-colors hover:bg-raised/60"
+          className="pressable flex h-9 w-full items-center rounded-md px-3 text-left font-mono text-[13px] text-danger hover:bg-raised/60"
         >
           {t("Sign out")}
         </button>
@@ -128,6 +133,7 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
       <Group>
         <Row label={t("Sign out")} destructive onClick={onSignOut} />
       </Group>
+      <PondWindow height={110} />
     </div>
   );
 
@@ -135,11 +141,15 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
     <FullPage title={wide || !current ? t("Settings") : t(current.label)} onBack={back} onClose={() => onOpenChange(false)} wide>
       {wide ? (
         <div className="grid gap-10 md:grid-cols-[14rem_minmax(0,1fr)] md:items-start">
-          <div className="md:sticky md:top-2 md:max-h-[calc(100dvh-5.5rem)] md:overflow-y-auto">{nav}</div>
-          <div className="min-w-0 max-w-3xl">
+          {/* The list scrolls; the pond window stays at the foot of the column. */}
+          <div className="flex flex-col gap-4 md:sticky md:top-2 md:h-[calc(100dvh-5.5rem)] md:min-h-[26rem]">
+            <div className="quiet-scroll -mr-2 min-h-0 flex-1 overflow-y-auto pr-2">{nav}</div>
+            <PondWindow height={150} className="shrink-0" />
+          </div>
+          <div key={active} className="motion-enter min-w-0 max-w-3xl">
             {current && (
               <div className="mb-8">
-                <h2 className="text-[20px] font-medium tracking-tight">{t(current.label)}</h2>
+                <h2 className="font-mono text-[20px] font-medium lowercase tracking-tight">{t(current.label)}</h2>
                 {current.note && <p className="mt-1 text-[13px] text-fg-muted">{t(current.note)}</p>}
               </div>
             )}
@@ -150,9 +160,6 @@ export default function Settings({ open, onOpenChange, isAdmin, username, onSign
     </FullPage>
   );
 }
-
-// Small mono lowercase caption, the same voice as the pond captions.
-const CAPTION = "font-mono text-[11px] lowercase tracking-wide text-fg-subtle";
 
 // A plain list of tappable rows on phones: hairlines between them, no card.
 function Group({ children }) {
@@ -184,22 +191,28 @@ function useLoad(load, deps = []) {
   return { ...state, reload };
 }
 
-function Notice({ text, error }) {
+// A hairline box with mono text. Errors only colour the text; a saved message gets the small koi.
+function Notice({ text, error, glyph = false }) {
   if (!text) return null;
   return (
-    <p role={error ? "alert" : "status"} className={`rounded-md border px-3 py-2 text-[13px] ${
-      error ? "border-danger/30 bg-danger-soft text-danger" : "border-border text-fg-muted"
-    }`}>{text}</p>
+    <p role={error ? "alert" : "status"} className={`flex items-center gap-3 rounded-md border px-3 py-2 font-mono text-[12px] ${
+      error ? "border-danger/40 text-danger" : "border-border text-fg-muted"
+    }`}>
+      {glyph && !error && <KoiGlyph size={28} className="shrink-0" />}
+      <span className="min-w-0">{text}</span>
+    </p>
   );
 }
 
-// A group of settings: a mono caption and a short note, then the rows. A hairline starts each group.
+// A group of settings: a wave rule (not on the first group, nor right under an intro line), a mono caption
+// and a short note, then the rows.
 function Section({ title, description, children }) {
   return (
-    <section className="border-t border-border pt-4 first:border-t-0 first:pt-0">
+    <section className="group/section">
+      <WaveRule className="mb-5 group-first/section:hidden [p+section_&]:hidden" />
       {(title || description) && (
         <div className="mb-2">
-          {title && <h3 className={CAPTION}>{title}</h3>}
+          {title && <h3 className="caption">{title}</h3>}
           {description && <p className="mt-1 text-[13px] leading-snug text-fg-muted">{description}</p>}
         </div>
       )}
@@ -217,7 +230,7 @@ function Rows({ children, className = "" }) {
 // On phones the control sits below, unless `inline` (switches and buttons stay on the same line).
 function SettingRow({ label, description, children, inline = false, className = "" }) {
   return (
-    <div className={`flex min-h-11 gap-x-6 gap-y-2 py-3 ${
+    <div className={`flex min-h-11 gap-x-6 gap-y-2 py-3 max-sm:min-h-12 ${
       inline ? "items-center justify-between" : "flex-col sm:flex-row sm:items-center sm:justify-between"
     } ${className}`}>
       <div className="min-w-0">
@@ -240,7 +253,7 @@ function ToggleRow({ label, description, checked, onCheckedChange, disabled, cla
 }
 
 const TEXTAREA = "w-full rounded-md border border-border bg-surface px-3 py-2 text-base md:text-sm "
-  + "placeholder:text-fg-subtle transition-colors focus:border-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/10";
+  + "placeholder:text-fg-subtle transition-colors focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25";
 
 // ---- Account ----
 
@@ -294,7 +307,7 @@ function AccountTab({ username, onChanged, onSignOut }) {
   }
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-6">
       <Section title={t("Username")} description={t("The name you sign in with.")}>
         <form className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={saveName}>
           <Field label={t("Username")} hint={t("2–20 letters, digits, - or _")} className="sm:w-72">
@@ -381,7 +394,7 @@ function PersonalTab() {
   }
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-6">
       <Section title={t("Your instructions")} description={t("Taken into account in every new chat.")}>
         <form className="mt-3 grid gap-3" onSubmit={saveInstructions}>
           <textarea
@@ -477,7 +490,7 @@ function AppearanceTab() {
   }
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-6">
       <Section title={t("Interface language")} description={t("Interface language and reply language are separate.")}>
         <Rows>
           <SettingRow label={t("Language")} description={t("The language of buttons and menus.")}>
@@ -495,11 +508,12 @@ function AppearanceTab() {
               type="button"
               aria-pressed={theme === option.value}
               onClick={() => choose(option.value)}
-              className={`h-11 text-[14px] transition-colors sm:h-9 ${
+              className={`pressable relative h-11 font-mono text-[13px] sm:h-9 ${
                 theme === option.value ? "bg-raised font-medium text-fg" : "bg-surface text-fg-muted hover:text-fg"
               }`}
             >
               {t(option.label)}
+              {theme === option.value && <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 bg-accent" />}
             </button>
           ))}
         </div>
@@ -546,7 +560,7 @@ function VoiceTab() {
   }
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-6">
       <Section title={t("Replies")} description={t("Read aloud when a reply arrives. You can still switch it on or off in the account menu.")}>
         <Rows>
           <ToggleRow checked={prefs.readAloud} onCheckedChange={(v) => save({ readAloud: v })} label={t("Read replies aloud by default.")} />
@@ -625,7 +639,7 @@ function AppsTab() {
   }
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-6">
       <p className="max-w-prose text-[13px] text-fg-muted">
         {t("Install an app to let the assistant use it. Anything that changes something asks you to confirm first.")}
       </p>
@@ -753,7 +767,7 @@ function DataTab({ onChatsChanged }) {
   async function deleteMemories() {
     try {
       const result = await api("/api/me/memories", { method: "DELETE" });
-      toast.success(`Deleted ${result.deleted} memor${result.deleted === 1 ? "y" : "ies"}`);
+      toast.success(t(result.deleted === 1 ? "Deleted {count} memory" : "Deleted {count} memories", { count: result.deleted }));
       setForgetAll(false);
     } catch (err) {
       toast.error(err.message);
@@ -791,7 +805,7 @@ function DataTab({ onChatsChanged }) {
   }
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-6">
       <Section>
         <Rows>
           <SettingRow inline label={t("Export")} description={t("Download your chats, memories and notes as one JSON file.")}>
@@ -902,7 +916,7 @@ function MailTab() {
   }
 
   return (
-    <form className="grid gap-8" onSubmit={save}>
+    <form className="grid gap-6" onSubmit={save}>
       <p className="max-w-prose text-[13px] text-fg-muted">{t("The assistant reads only the sender, subject and date of your mail. Nothing is changed or moved. Use an app password from Yahoo, not your normal password.")}</p>
       {!s.secretsEnabled && <Notice text={t("The server has no ENCRYPTION_KEY, so the password cannot be stored.")} error />}
 
@@ -944,16 +958,16 @@ function MailTab() {
         <Button className="max-sm:h-11" onClick={showInbox} disabled={busy || !s.hasPassword}>{t("Show inbox")}</Button>
         <Button className="max-sm:h-11" onClick={checkNow} disabled={busy || !s.reportEnabled}>{t("Check now")}</Button>
       </div>
-      <Notice text={message.text} error={message.error} />
+      <Notice text={message.text} error={message.error} glyph={message.text === t("Saved.")} />
       {inbox && (
-        <div className="divide-y divide-border rounded-md border border-border">
+        <div className="divide-y divide-border border-y border-border">
           {inbox.map((m) => (
             <div key={m.uid} className="grid gap-0.5 px-3 py-2.5">
               <span className="truncate text-[13px] text-fg-muted">{m.from}{m.seen ? "" : " · new"}</span>
               <span className="truncate text-[14px]">{m.subject}</span>
             </div>
           ))}
-          {!inbox.length && <div className="px-3 py-2.5 text-[14px] text-fg-muted">{t("Inbox is empty.")}</div>}
+          {!inbox.length && <KoiEmpty title={t("Inbox is empty.")} className="py-8" />}
         </div>
       )}
     </form>
@@ -987,7 +1001,7 @@ function MemoryTab() {
   }
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-6">
       <Section>
         <Rows>
           <ToggleRow
@@ -999,14 +1013,14 @@ function MemoryTab() {
         </Rows>
       </Section>
       <Section description={t("Things you asked the assistant to remember. It uses them in every chat. Ask it to “remember that…” to add one.")}>
-        {!data.memories.length && <p className="py-6 text-[14px] text-fg-subtle">{t("Nothing saved yet.")}</p>}
+        {!data.memories.length && <KoiEmpty title={t("Nothing saved yet.")} className="py-8" />}
         {data.memories.length > 0 && (
           <Rows>
             {data.memories.map((m) => (
-              <div key={m.id} className="flex min-h-11 items-center gap-2 py-1.5">
+              <div key={m.id} className="flex min-h-11 items-center gap-2 py-1.5 max-sm:min-h-12">
                 <span className="min-w-0 flex-1 break-words text-[14px]">{m.text}</span>
                 {m.source === "chat" && <Badge>{t("From a chat")}</Badge>}
-                <IconButton label={`Delete memory: ${m.text}`} className="size-11 sm:size-9" onClick={() => forget(m.id)}>
+                <IconButton label={t("Delete memory: {text}", { text: m.text })} className="size-11 sm:size-9" onClick={() => forget(m.id)}>
                   <Trash2 size={16} aria-hidden="true" />
                 </IconButton>
               </div>
@@ -1106,11 +1120,12 @@ function AdminTab() {
           aria-current={section === page.value ? "page" : undefined}
           onClick={() => setPicked(page.value)}
           className={wide
-            ? `flex h-8 w-full items-center rounded-md px-2.5 text-left text-[14px] transition-colors ${
+            ? `pressable relative flex h-9 w-full items-center overflow-hidden rounded-md px-3 text-left font-mono text-[13px] ${
               section === page.value ? "bg-raised font-medium text-fg" : "text-fg-muted hover:bg-raised/60 hover:text-fg"
             }`
             : "flex min-h-14 w-full items-center gap-3 px-1 py-2 text-left transition-colors active:bg-raised"}
         >
+          {wide && section === page.value && <span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 bg-accent" />}
           <span className="min-w-0 flex-1">
             <span className={wide ? "block truncate" : "block text-[15px] text-fg"}>{t(page.label)}</span>
             {!wide && <span className="block text-[13px] leading-snug text-fg-muted">{t(page.note)}</span>}
@@ -1132,7 +1147,7 @@ function AdminTab() {
             </button>
           )}
           <div>
-            <h3 className="text-[18px] font-medium tracking-tight">{t(current.label)}</h3>
+            <h3 className="font-mono text-[20px] font-medium lowercase tracking-tight">{t(current.label)}</h3>
             <p className="mt-1 text-[13px] text-fg-muted">{t(current.note)}</p>
           </div>
           <AdminSection section={section} />
@@ -1220,7 +1235,7 @@ function ConnectorsAdmin() {
   }
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-6">
       <p className="max-w-prose text-[13px] text-fg-muted">
         {t("Connectors are MCP servers (Streamable HTTP, https). Their tokens are stored encrypted and never shown again. Users switch them on in their own settings.")}
       </p>
@@ -1244,7 +1259,7 @@ function ConnectorsAdmin() {
             ))}
           </Rows>
         )}
-        {!data.connectors.length && <p className="py-2 text-[14px] text-fg-subtle">{t("No connectors yet.")}</p>}
+        {!data.connectors.length && <KoiEmpty title={t("No connectors yet.")} className="py-8" />}
       </Section>
 
       <Section title={t("Add a connector")}>
@@ -1293,7 +1308,7 @@ function GeneralAdmin() {
   }
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-6">
       <Section>
         <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={save}>
           <Field label={t("Assistant name")} hint={t("Shown in the app and to the AI.")} className="sm:w-72">
@@ -1326,15 +1341,16 @@ function UsersAdmin() {
   }
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-6">
       <InvitesAdmin onChanged={reload} />
+      {data.users.length > 0 && <WaveRule />}
       {data.users.map((u) => (
         <section key={u.id} className="grid gap-5 border-t border-border pt-5">
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="truncate text-[15px] font-medium">{u.username}</span>
-                {u.isAdmin && <Badge tone="accent">{t("Admin")}</Badge>}
+                {u.isAdmin && <Badge>{t("Admin")}</Badge>}
                 {!u.active && <Badge tone="danger">{t("Switched off")}</Badge>}
               </div>
               <div className="mt-0.5 font-mono text-[12px] text-fg-muted tabular-nums">
@@ -1348,7 +1364,7 @@ function UsersAdmin() {
             )}
           </div>
           <div className="grid gap-1">
-            <span className={CAPTION}>{t("What this user may use")}</span>
+            <span className="caption">{t("What this user may use")}</span>
             <FeatureSwitches user={u} reload={reload} />
           </div>
           <PasswordReset userId={u.id} />
@@ -1405,7 +1421,7 @@ function InvitesAdmin({ onChanged }) {
     <section className="grid gap-4">
       <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
         <div className="min-w-0">
-          <h3 className={CAPTION}>{t("Invite someone")}</h3>
+          <h3 className="caption">{t("Invite someone")}</h3>
           <p className="mt-1 max-w-prose text-[13px] leading-snug text-fg-muted">
             {t("They open the link, choose a username and a password, and are signed in. Links work once and expire after 7 days.")}
           </p>
@@ -1592,12 +1608,12 @@ function AiAdmin() {
   }
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-6">
       <AiKeyCard keySource={data.provider.keySource} onChanged={reload} />
       <Section>
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[14px] font-medium">{data.provider.name}</span>
-          <Badge tone={data.provider.keySet ? "accent" : "danger"}>
+          <Badge tone={data.provider.keySet ? "neutral" : "danger"}>
             {data.provider.keySet ? t("Key set") : t("No key yet")}
           </Badge>
         </div>
@@ -1701,7 +1717,7 @@ function UsageAdmin() {
   if (error) return <Notice text={error} error />;
   if (!data) return <Loading />;
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-6">
       <Field label={t("Period")} className="max-w-xs">
         <Select value={days} onChange={(e) => setDays(Number(e.target.value))}>
           {[1, 7, 30, 90].map((d) => <option key={d} value={d}>{t("Last {n} days", { n: d })}</option>)}

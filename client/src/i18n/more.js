@@ -337,6 +337,12 @@ Object.assign(de, {
   "Fast: one audio model listens and answers": "Schnell: ein Audiomodell hört zu und antwortet",
   "Smart: listens and thinks first, then speaks": "Schlau: hört zu und denkt zuerst, spricht dann",
   "Voice engine saved": "Sprach-Engine gespeichert",
+  "Feed the koi": "Koi füttern",
+  "Your name, password and signed-in devices.": "Dein Name, dein Passwort und die angemeldeten Geräte.",
+  "Language and theme of the app.": "Sprache und Design der App.",
+  "How the assistant answers you.": "Wie der Assistent dir antwortet.",
+  "How replies sound.": "Wie Antworten klingen.",
+  "Export or delete what is stored about you.": "Exportiere oder lösche, was über dich gespeichert ist.",
   "Sign in": "Anmelden",
   "Your private assistant": "Dein privater Assistent",
   "tap: cat's paw · hold or right-click: feed the koi": "tippen: Katzenpfote · lange drücken oder rechtsklicken: Koi füttern"

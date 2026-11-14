@@ -1,4 +1,4 @@
-import { t } from "../i18n/index.js";
+import { currentLocale, t } from "../i18n/index.js";
 import { Check, Copy, FileText, Pencil, RotateCw, StickyNote } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 import { toast } from "sonner";
@@ -9,6 +9,13 @@ import { Button, IconButton } from "../ui/ui.jsx";
 const Widgets = lazy(() => import("../ui/Widgets.jsx"));
 
 const isImage = (a) => a.kind === "image" || a.mime?.startsWith("image/");
+// The server stores UTC as "YYYY-MM-DD HH:MM:SS". A time we cannot read is simply not shown.
+const timeOf = (value) => {
+  if (!value) return "";
+  const d = new Date(typeof value === "string" && !/[zZ]|[+-]\d\d:?\d\d$/.test(value) ? `${value.replace(" ", "T")}Z` : value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString(currentLocale(), { hour: "2-digit", minute: "2-digit" });
+};
 const domainOf = (url) => {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -24,7 +31,7 @@ function FileChip({ file, onOpen }) {
     <button
       type="button"
       onClick={() => onOpen?.(file)}
-      className="flex max-w-full items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-left text-[13px] transition-colors hover:border-border-strong"
+      className="pressable flex max-w-full items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-left font-mono text-[13px] hover:border-border-strong"
     >
       <FileText size={14} aria-hidden="true" className="shrink-0 text-fg-muted" />
       <span className="truncate">{file.name}</span>
@@ -48,7 +55,7 @@ function EditQuestion({ value, busy, onSave, onCancel }) {
         rows={3}
         maxLength={4000}
         aria-label={t("Edit message")}
-        className="w-full resize-none rounded-lg border border-border bg-surface px-3.5 py-2.5 text-base leading-6 focus:border-fg-subtle focus:outline-none md:text-[15px]"
+        className="w-full resize-none rounded-md border border-border bg-surface px-3.5 py-2.5 text-base leading-6 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25 md:text-[15px]"
       />
       <div className="flex justify-end gap-2">
         <Button size="sm" variant="ghost" onClick={onCancel} disabled={busy}>{t("Cancel")}</Button>
@@ -76,7 +83,7 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
                     src={a.previewUrl || `/api/attachments/${a.id}`}
                     alt={a.name}
                     loading="lazy"
-                    className="max-h-60 max-w-full rounded-md border border-border object-cover"
+                    className="max-h-60 max-w-full rounded-lg border border-border object-cover"
                   />
                 </button>
               ) : (
@@ -94,12 +101,12 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
           ) : (
             <div className="flex items-start gap-0.5">
               {saved && onEdit && !busy && (
-                <IconButton label={t("Edit message")} onClick={() => setEditing(true)} className="size-11 opacity-100 md:size-8 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:focus-visible:opacity-100">
+                <IconButton label={t("Edit message")} onClick={() => setEditing(true)} className="size-11 opacity-100 md:size-9 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 md:focus-visible:opacity-100">
                   <Pencil size={14} aria-hidden="true" />
                 </IconButton>
               )}
               {message.content && (
-                <div className="whitespace-pre-wrap break-words rounded-lg bg-raised px-3.5 py-2 text-[15px] leading-6">
+                <div className="whitespace-pre-wrap break-words rounded-lg bg-raised px-3.5 py-2.5 text-[15px] leading-[1.6]">
                   {message.content}
                 </div>
               )}
@@ -125,9 +132,9 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
   }
 
   return (
-    <article className="motion-enter group min-w-0 text-[15px] leading-7 md:text-base" aria-label={t("Assistant")}>
+    <article className="motion-enter group min-w-0 max-w-[68ch] text-[15px] leading-[1.7] md:text-base md:leading-[1.7]" aria-label={t("Assistant")}>
       {message.activity?.length > 0 && (
-        <p className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs leading-5 text-fg-subtle">
+        <p className="caption mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           {message.activity.map((label) => (
             <span key={label} className="inline-flex items-center gap-1.5">
               <Check size={12} aria-hidden="true" /> {label}
@@ -141,7 +148,7 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
           {attachments.map((a) => (isImage(a) ? (
             <button key={a.id} type="button" onClick={() => onOpenFile?.(a)} className="max-w-full">
               <img src={`/api/attachments/${a.id}`} alt={a.name} loading="lazy"
-                className="max-h-60 max-w-full rounded-md border border-border object-cover" />
+                className="max-h-60 max-w-full rounded-lg border border-border object-cover" />
             </button>
           ) : (
             <FileChip key={a.id} file={a} onOpen={onOpenFile} />
@@ -155,14 +162,14 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
       )}
       {sources.length > 0 && (
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] leading-5 text-fg-subtle">
-          <span className="font-mono text-xs uppercase tracking-wider">{t("Sources")}</span>
+          <span className="caption">{t("Sources")}</span>
           {sources.map((s) => (
             <a
               key={s.url}
               href={s.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="max-w-[16rem] truncate text-fg-muted underline decoration-border-strong underline-offset-4 hover:text-fg"
+              className="max-w-[16rem] truncate text-fg-muted underline decoration-border-strong underline-offset-4 transition-colors duration-150 hover:text-fg hover:decoration-accent"
             >
               {s.title || domainOf(s.url)}
             </a>
@@ -170,21 +177,24 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
         </div>
       )}
       {(message.content || canRegenerate) && saved && (
-        <div className="-ml-2 mt-2 flex items-center gap-0.5 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
+        <div className="-ml-2 mt-1 flex items-center gap-0.5 opacity-100 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
           {message.content && (
-            <IconButton label={copied ? t("Copied") : t("Copy answer")} onClick={copy} className="size-9 md:size-8">
+            <IconButton label={copied ? t("Copied") : t("Copy answer")} onClick={copy} className="size-11 md:size-9">
               {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
             </IconButton>
           )}
           {message.content && onSaveNote && (
-            <IconButton label={t("Save as note")} onClick={() => onSaveNote(message)} className="size-9 md:size-8">
+            <IconButton label={t("Save as note")} onClick={() => onSaveNote(message)} className="size-11 md:size-9">
               <StickyNote size={14} aria-hidden="true" />
             </IconButton>
           )}
           {canRegenerate && onRegenerate && !busy && (
-            <IconButton label={t("Generate again")} onClick={() => onRegenerate(message.id)} className="size-9 md:size-8">
+            <IconButton label={t("Generate again")} onClick={() => onRegenerate(message.id)} className="size-11 md:size-9">
               <RotateCw size={14} aria-hidden="true" />
             </IconButton>
+          )}
+          {timeOf(message.created_at ?? message.createdAt) && (
+            <time className="caption ml-2 tabular-nums">{timeOf(message.created_at ?? message.createdAt)}</time>
           )}
         </div>
       )}

@@ -12,6 +12,8 @@ import Composer from "./chat/Composer.jsx";
 import Message from "./chat/Message.jsx";
 import { kindFor, MAX_BYTES, PICKER_ACCEPT, uploadFile } from "./files.js";
 import KoiPanel from "./ui/KoiPanel.jsx";
+import KoiGlyph from "./ui/KoiGlyph.jsx";
+import PondField from "./ui/PondField.jsx";
 import { ChatSkeleton } from "./ui/Loading.jsx";
 import CommandPalette from "./ui/CommandPalette.jsx";
 import { CalendarClock, FileText, Library as LibraryIcon, LayoutGrid, MessageSquare } from "lucide-react";
@@ -156,6 +158,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
 
   const recordingRef = useRef(null);
   const feedRef = useRef(null);
+  const pondColumnRef = useRef(null); // the reading column: the koi in the background fade out under it
   // One hidden input per source, like the iOS attach menu: camera, photo library, Files.
   const cameraInputRef = useRef(null);
   const photoInputRef = useRef(null);
@@ -768,8 +771,10 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
 
   // ---- layout ----
 
-  const sidebar = (
+  const renderSidebar = (drawer) => (
     <Sidebar
+      drawer={drawer}
+      pondHeight={drawer ? (chatsOpen ? 110 : 0) : (sidebarShown ? 140 : 0)}
       conversations={conversations}
       projects={projects}
       activeId={activeId}
@@ -790,15 +795,19 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
   );
 
   const sidebarHeader = (
-    <div className="px-2 pb-3 pt-1 text-sm font-semibold tracking-tight">{assistantName}</div>
+    <div className="flex min-w-0 items-center gap-2.5 px-2 pb-3 pt-1">
+      <KoiGlyph size={30} />
+      <span className="truncate text-[20px] leading-7" style={{ fontFamily: '"Noto Serif Display", "Iowan Old Style", Georgia, serif', fontWeight: 700 }}>{assistantName}</span>
+    </div>
   );
 
   return (
     <div className="flex h-dvh w-full overflow-hidden">
+      <a href="#chat-main" onClick={() => document.getElementById("chat-main")?.focus()} className="sr-only z-[70] rounded-md bg-accent px-4 py-3 text-sm font-medium text-accent-fg focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:outline-2 focus:outline-offset-2 focus:outline-fg">{t("Skip to chat")}</a>
       {/* Wide screens: the chat list is always visible */}
       <aside className={`hidden min-w-0 w-72 shrink-0 flex-col overflow-hidden border-r border-border bg-surface p-3 ${!sidebarShown ? "" : viewing ? "xl:flex" : "md:flex"}`} aria-label={t("Chats")}>
         {sidebarHeader}
-        {sidebar}
+        {renderSidebar(false)}
       </aside>
 
       {/* Phones: the same list in a drawer */}
@@ -808,21 +817,21 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
         {...(chatsOpen ? {} : { inert: "" })}
         className="fixed inset-y-0 left-0 z-0 flex w-[min(86vw,300px)] flex-col border-r border-border bg-surface pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] md:hidden"
       >
-        <div className="flex items-center justify-between px-4 pb-2 pt-3">
+        <div className="flex items-center justify-between gap-2 px-3 pb-2 pt-3">
           {sidebarHeader}
           <IconButton label={t("Close chats")} onClick={() => setChatsOpen(false)}><X size={20} aria-hidden="true" /></IconButton>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col px-3 pb-3">{sidebar}</div>
+        <div className="flex min-h-0 flex-1 flex-col px-3 pb-3">{renderSidebar(true)}</div>
         <button
           type="button"
           onClick={() => { setChatsOpen(false); setSettingsOpen(true); }}
-          className="m-3 flex items-center gap-3 rounded-xl p-2.5 text-left transition-colors hover:bg-raised"
+          className="mx-3 mb-3 flex min-h-11 items-center gap-3 rounded-md px-2 text-left transition-colors hover:bg-raised"
         >
           <span className="grid size-8 shrink-0 place-items-center rounded-full bg-raised text-xs font-medium uppercase">
             {(user?.username || "?").slice(0, 1)}
           </span>
           <span className="min-w-0 flex-1 truncate text-sm font-medium">{user?.username}</span>
-          <span className="text-xs text-fg-subtle">{t("Settings")}</span>
+          <span className="caption">{t("Settings")}</span>
         </button>
       </aside>
 
@@ -836,15 +845,18 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
         />
       )}
 
-      <main className={`relative z-10 flex min-w-0 flex-1 flex-col bg-canvas transition-[transform,border-radius] duration-300 ease-out md:transform-none md:rounded-none ${
+      <main id="chat-main" tabIndex={-1} className={`relative z-10 flex min-w-0 flex-1 flex-col bg-canvas outline-none transition-[transform,border-radius] duration-300 ease-out md:transform-none md:rounded-none ${
         chatsOpen ? "origin-left translate-x-[min(86vw,300px)] scale-[0.92] overflow-hidden rounded-[22px] shadow-2xl" : ""
       }`}>
+        {/* The koi pond is a quiet watermark behind the conversation (DESIGN.md). The empty chat has its own pond. */}
+        {messages.length > 0 && <PondField column={pondColumnRef} paused={settingsOpen || voiceOpen} opacity={0.24} minWidth={1024} className="-z-10" />}
+        <div ref={pondColumnRef} aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-1/2 -z-10 w-[min(100%,48rem)] -translate-x-1/2" />
         <header className="flex h-12 shrink-0 items-center gap-1 border-b border-border px-2 pt-[env(safe-area-inset-top)] md:px-3">
           <IconButton
             label={sidebarShown ? t("Hide sidebar") : t("Show sidebar")}
             onClick={() => setSidebarShown((v) => !v)}
             aria-expanded={sidebarShown}
-            className="size-9 max-md:hidden"
+            className={viewing ? "size-9 max-xl:hidden" : "size-9 max-md:hidden"}
           >
             <PanelLeft size={17} aria-hidden="true" />
           </IconButton>
@@ -852,10 +864,14 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
             <MenuIcon size={19} aria-hidden="true" />
           </IconButton>
           <div className="flex min-w-0 flex-1 items-center gap-1">
-            <h1 className="truncate text-sm font-medium">{active?.title || (activeId ? t("Chat") : t("New chat"))}</h1>
+            {/* The orb is the assistant's presence: it shows idle, thinking and speaking (DESIGN.md). Decorative. */}
+            <span className="mx-1.5 grid shrink-0 place-items-center" aria-hidden="true">
+              <OrbView status={status} size={22} decorative />
+            </span>
+            <h1 className="truncate font-mono text-[13px] font-medium">{active?.title || (activeId ? t("Chat") : t("New chat"))}</h1>
             {active && (
               <Menu trigger={
-                <button type="button" aria-label={t("Chat options")} className="grid size-11 shrink-0 place-items-center rounded-md text-fg-muted hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg md:size-9">
+                <button type="button" aria-label={t("Chat options")} className="pressable grid size-11 shrink-0 place-items-center rounded-md text-fg-muted hover:bg-raised hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg md:size-9">
                   <MoreHorizontal size={17} aria-hidden="true" />
                 </button>
               } align="start">
@@ -867,18 +883,13 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
               </Menu>
             )}
           </div>
-          {status !== "idle" && (
-            <span className="mr-1 hidden sm:block" aria-hidden="true">
-              <OrbView status={status} size={22} decorative />
-            </span>
-          )}
           <Menu trigger={
-            <button type="button" aria-label={`Account: ${user?.username || ""}`}
-              className="grid size-7 place-items-center rounded-full border border-border bg-raised text-xs font-medium uppercase hover:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg">
+            <button type="button" aria-label={t("Account: {name}", { name: user?.username || "" })}
+              className="pressable grid size-11 place-items-center rounded-full border border-border bg-raised font-mono text-xs font-medium uppercase hover:border-border-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg md:size-9">
               {(user?.username || "?").slice(0, 1)}
             </button>
           }>
-            <div className="px-3 py-2 text-xs text-fg-subtle">Signed in as {user?.username}</div>
+            <div className="px-3 py-2 text-xs text-fg-subtle">{t("Signed in as {name}", { name: user?.username || "" })}</div>
             <MenuSeparator />
             <MenuItem icon={theme === "dark" ? Sun : Moon} onSelect={changeTheme}>
               {theme === "dark" ? t("Light mode") : t("Dark mode")}
@@ -917,13 +928,14 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
                 />
               ))}
               {busy && !streamText && (
-                <div className="flex items-center gap-2 text-fg-subtle" role="status" aria-label={t("Thinking")}>
-                  <OrbView status="thinking" size={20} decorative />
-                  <span className="font-mono text-xs">{t("Thinking…")}</span>
+                <div className="motion-enter flex items-center gap-3" role="status" aria-label={t("Thinking")}>
+                  <KoiGlyph size={34} swim />
+                  <span className="caption">{t("Thinking…")}</span>
                 </div>
               )}
               {actions.length > 0 && (
                 <div className="grid gap-3" aria-label={t("Waiting for your confirmation")}>
+                  <p className="caption" aria-hidden="true">{t("Waiting for your confirmation")}</p>
                   {actions.map((a) => (
                     <ActionCard key={a.id} action={a} onConfirm={() => confirmAction(a)} onCancel={() => cancelAction(a)} />
                   ))}
@@ -934,7 +946,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
         </div>
 
         {error && (
-          <p role="alert" className="mx-auto mb-2 w-[min(92%,48rem)] rounded-lg border border-danger/30 bg-danger-soft px-3.5 py-2 text-sm text-danger">
+          <p role="alert" className="motion-enter mx-auto mb-2 w-[min(92%,48rem)] rounded-lg border border-danger/50 bg-overlay px-3.5 py-2 font-mono text-[13px] leading-5 text-danger">
             {error}
           </p>
         )}
@@ -1115,7 +1127,7 @@ function EmptyState({ assistantName, activeId, onStarter }) {
         ? <KoiPanel className="h-44 w-full max-w-md" />
         : <OrbView status="idle" size={112} decorative />}
       <div className="grid gap-2">
-        <h2 className="text-2xl font-semibold tracking-tight">
+        <h2 className="text-[26px] leading-[1.2] tracking-tight md:text-[28px]" style={{ fontFamily: '"Noto Serif Display", "Iowan Old Style", Georgia, serif', fontWeight: 700 }}>
           {activeId ? t("This chat is empty") : t("What can {name} do for you?", { name: assistantName })}
         </h2>
         <p className="text-[15px] text-fg-muted">{t("Type, dictate, attach a photo or PDF, or start a conversation.")}</p>
@@ -1127,10 +1139,10 @@ function EmptyState({ assistantName, activeId, onStarter }) {
               key={item.text}
               type="button"
               onClick={() => onStarter(item.text)}
-              className="rounded-lg border border-border bg-surface px-4 py-3 text-left text-sm text-fg-muted transition-colors duration-150 hover:border-border-strong hover:text-fg"
+              className="pressable rounded-lg border border-border bg-surface px-4 py-3 text-left text-sm text-fg-muted hover:border-accent hover:text-fg focus-visible:border-accent focus-visible:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25"
             >
               {SOURCE_LABEL[item.source] && (
-                <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-fg-subtle">
+                <span className="caption mb-1 block">
                   {t(SOURCE_LABEL[item.source])}
                 </span>
               )}
@@ -1138,7 +1150,7 @@ function EmptyState({ assistantName, activeId, onStarter }) {
             </button>
           ))
           : Array.from({ length: 4 }, (_, i) => (
-            <div key={i} className="h-[62px] animate-pulse rounded-lg border border-border bg-surface" />
+            <div key={i} className="h-[62px] animate-pulse rounded-lg border border-border bg-raised motion-reduce:animate-none" />
           ))}
       </div>
     </div>
@@ -1148,14 +1160,14 @@ function EmptyState({ assistantName, activeId, onStarter }) {
 // A proposal that changes data (calendar event, note deletion). Runs only on Confirm.
 function ActionCard({ action, onConfirm, onCancel }) {
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-3 sm:flex-row sm:items-center">
+    <div className="motion-enter flex flex-col gap-3 rounded-lg border border-border bg-surface p-3 sm:flex-row sm:items-center">
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium">{action.title}</div>
-        {action.details && <div className="mt-0.5 truncate text-[13px] text-fg-muted">{action.details}</div>}
+        <div className="text-sm">{action.title}</div>
+        {action.details && <div className="mt-0.5 truncate font-mono text-xs tabular-nums text-fg-muted">{action.details}</div>}
       </div>
       <div className="flex gap-2">
-        <Button variant="primary" size="sm" onClick={onConfirm}><Check size={14} aria-hidden="true" /> {t("Confirm")}</Button>
-        <Button variant="ghost" size="sm" onClick={onCancel}>{t("Cancel")}</Button>
+        <Button variant="primary" size="sm" className="max-sm:h-11 max-sm:flex-1" onClick={onConfirm}><Check size={14} aria-hidden="true" /> {t("Confirm")}</Button>
+        <Button variant="ghost" size="sm" className="max-sm:h-11 max-sm:flex-1" onClick={onCancel}>{t("Cancel")}</Button>
       </div>
     </div>
   );

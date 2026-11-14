@@ -1,9 +1,10 @@
 import { useEdgeBack } from "./edgeBack.js";
 import { t } from "../i18n/index.js";
 // Shared building blocks. Radix handles focus and keyboard for dialogs, menus, tabs and
-// switches. Styling is restrained: 6px controls, 8px cards, 12px dialogs, pills only for
-// badges and switches, hairline borders instead of shadows. Nothing here is rounder than 12px.
-import { useEffect, useRef } from "react";
+// switches. They carry the koi theme (DESIGN.md): chrome in Geist Mono 13px, 6px controls (36px, 44px on
+// touch), 8px cards and menus, 12px dialogs, hairlines instead of shadows (one faint one under menus),
+// vermilion only for the primary action and the current choice. Nothing here is rounder than 12px.
+import { useRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as DropdownPrimitive from "@radix-ui/react-dropdown-menu";
 import * as SwitchPrimitive from "@radix-ui/react-switch";
@@ -12,10 +13,11 @@ import { ArrowLeft, X } from "lucide-react";
 
 const cx = (...parts) => parts.filter(Boolean).join(" ");
 
-const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-fg";
+const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 // The same ring drawn inside the element, for tabs that sit in a clipped scroll row.
-const FOCUS_INSET = "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-fg";
+const FOCUS_INSET = "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent";
 
+// Primary is the one vermilion thing; secondary is a hairline on surface; ghost is text only; danger is danger text with a hairline.
 const BUTTON_VARIANT = {
   primary: "bg-accent text-accent-fg hover:opacity-90",
   secondary: "border border-border-strong bg-surface text-fg hover:bg-raised",
@@ -23,10 +25,11 @@ const BUTTON_VARIANT = {
   danger: "border border-danger/40 text-danger hover:bg-danger-soft",
 };
 
+// 36px on desktop, 44px on phones and touch screens (sm is 32px, 40px on touch).
 const BUTTON_SIZE = {
-  sm: "h-8 rounded-md px-3 text-label",
-  md: "h-9 rounded-md px-3.5 text-sm",
-  lg: "h-10 rounded-md px-4 text-[15px]",
+  sm: "h-8 px-2.5 max-sm:h-10 pointer-coarse:h-10",
+  md: "h-9 px-3.5 max-sm:h-11 pointer-coarse:h-11",
+  lg: "h-10 px-4 max-sm:h-11 pointer-coarse:h-11",
 };
 
 export function Button({ variant = "secondary", size = "md", className, ...props }) {
@@ -34,7 +37,7 @@ export function Button({ variant = "secondary", size = "md", className, ...props
     <button
       type="button"
       className={cx(
-        "pressable inline-flex items-center justify-center gap-2 font-medium",
+        "pressable inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-mono text-[13px] font-medium leading-none",
         "disabled:pointer-events-none", FOCUS,
         BUTTON_VARIANT[variant], BUTTON_SIZE[size], className,
       )}
@@ -43,7 +46,7 @@ export function Button({ variant = "secondary", size = "md", className, ...props
   );
 }
 
-// Icon button. The default is 36px; pass className="size-11" for a 44px touch target.
+// Icon button. The default is 36px (44px on touch); pass className="size-11" for a fixed 44px target.
 export function IconButton({ label, active = false, className, children, ...props }) {
   return (
     <button
@@ -52,7 +55,7 @@ export function IconButton({ label, active = false, className, children, ...prop
       title={label}
       className={cx(
         // A size passed in replaces the default size (both classes would fight in the stylesheet).
-        /\bsize-/.test(className || "") ? "" : "size-9",
+        /\bsize-/.test(className || "") ? "" : "size-9 pointer-coarse:size-11",
         "pressable grid shrink-0 place-items-center rounded-md disabled:pointer-events-none",
         FOCUS,
         active ? "bg-raised text-fg" : "text-fg-muted hover:bg-raised hover:text-fg",
@@ -70,18 +73,24 @@ export function Field({ label, hint, children, className }) {
     <label className={cx("grid gap-1.5", className)}>
       {label && <span className="text-label font-medium text-fg-muted">{label}</span>}
       {children}
-      {hint && <span className="text-caption text-fg-subtle">{hint}</span>}
+      {hint && <span className="hint">{hint}</span>}
     </label>
   );
 }
 
-// 44px tall with 16px text on phones (iOS does not zoom on focus), 36px with 14px from md up.
-const FIELD = "h-11 w-full rounded-md border border-border-strong bg-surface px-3 text-base md:h-9 md:text-sm "
+// 44px tall with 16px text on phones and touch screens (iOS does not zoom on focus), 36px with 14px on a desktop.
+// Focus is a vermilion hairline plus a 2px ring at 25%.
+const FIELD_BASE = "w-full rounded-md border border-border-strong bg-surface px-3 text-base md:text-sm pointer-coarse:text-base "
   + "placeholder:text-fg-subtle transition-colors duration-150 hover:border-fg-subtle "
-  + "focus:border-fg focus:outline-none focus:ring-1 focus:ring-fg disabled:opacity-50";
+  + "focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25 disabled:opacity-50";
+const FIELD = cx(FIELD_BASE, "h-11 md:h-9 pointer-coarse:h-11");
 
 export function Input({ className, ...props }) {
   return <input className={cx(FIELD, className)} {...props} />;
+}
+
+export function Textarea({ className, ...props }) {
+  return <textarea className={cx(FIELD_BASE, "min-h-24 resize-y py-2.5 leading-relaxed", className)} {...props} />;
 }
 
 export function Select({ className, children, ...props }) {
@@ -96,13 +105,13 @@ export function Switch({ checked, onCheckedChange, label, disabled }) {
         onCheckedChange={onCheckedChange}
         disabled={disabled}
         className={cx(
-          "relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-raised ring-1 ring-inset ring-border-strong transition-colors duration-150",
+          "relative mt-px h-5 w-9 shrink-0 rounded-full bg-raised ring-1 ring-inset ring-border-strong transition-colors duration-150",
           "data-[state=checked]:bg-accent data-[state=checked]:ring-transparent disabled:opacity-40", FOCUS,
         )}
       >
         <SwitchPrimitive.Thumb className="block size-4 translate-x-0.5 rounded-full bg-fg-muted transition-transform duration-150 data-[state=checked]:translate-x-[18px] data-[state=checked]:bg-accent-fg" />
       </SwitchPrimitive.Root>
-      <span className="text-sm leading-5 text-fg">{label}</span>
+      <span className="text-label font-medium leading-[22px] text-fg">{label}</span>
     </label>
   );
 }
@@ -117,8 +126,8 @@ export function Tabs({ value, onValueChange, items, className }) {
             key={item.value}
             value={item.value}
             className={cx(
-              "relative -mb-px h-10 shrink-0 whitespace-nowrap border-b-2 border-transparent text-sm text-fg-muted transition-colors duration-150",
-              "hover:text-fg data-[state=active]:border-accent data-[state=active]:font-medium data-[state=active]:text-fg", FOCUS_INSET,
+              "relative -mb-px h-10 shrink-0 whitespace-nowrap border-b-2 border-transparent font-mono text-[13px] font-medium text-fg-muted transition-colors duration-150",
+              "hover:text-fg data-[state=active]:border-accent data-[state=active]:text-fg", FOCUS_INSET,
             )}
           >
             {item.label}
@@ -145,7 +154,7 @@ export function Sheet({ open, onOpenChange, title, description, children, footer
         >
           <header className="flex min-h-14 shrink-0 items-center justify-between gap-4 border-b border-border px-5 py-2">
             <div className="min-w-0">
-              <DialogPrimitive.Title className="text-base font-semibold tracking-tight">{title}</DialogPrimitive.Title>
+              <DialogPrimitive.Title className="font-mono text-[15px] font-medium tracking-[-0.01em]">{title}</DialogPrimitive.Title>
               {description && (
                 <DialogPrimitive.Description className="mt-0.5 text-label text-fg-muted">{description}</DialogPrimitive.Description>
               )}
@@ -173,7 +182,7 @@ export function Menu({ trigger, children, align = "end" }) {
         <DropdownPrimitive.Content
           align={align}
           sideOffset={6}
-          className="motion-menu z-50 min-w-[200px] rounded-lg border border-border-strong bg-overlay p-1 text-fg outline-none"
+          className="motion-menu z-50 min-w-[200px] rounded-lg border border-border-strong bg-overlay p-1 text-fg outline-none [box-shadow:var(--shadow-float)]"
         >
           {children}
         </DropdownPrimitive.Content>
@@ -187,14 +196,14 @@ export function MenuItem({ icon: Icon, children, onSelect, destructive = false, 
     <DropdownPrimitive.Item
       onSelect={onSelect}
       className={cx(
-        "flex h-8 cursor-pointer select-none items-center gap-2.5 rounded px-2 text-sm outline-none",
+        "flex h-11 cursor-pointer select-none items-center gap-2.5 rounded-md px-2 font-mono text-[13px] font-medium outline-none md:h-8 pointer-coarse:h-11",
         "data-[highlighted]:bg-raised data-[disabled]:pointer-events-none data-[disabled]:opacity-45",
         destructive && "text-danger",
       )}
     >
       {Icon && <Icon size={16} aria-hidden="true" className="shrink-0 text-fg-muted" />}
       <span className="flex-1">{children}</span>
-      {checked !== undefined && <span className="text-caption text-fg-subtle">{checked ? t("On") : t("Off")}</span>}
+      {checked !== undefined && <span className="hint">{checked ? t("On") : t("Off")}</span>}
     </DropdownPrimitive.Item>
   );
 }
@@ -210,7 +219,7 @@ export function Modal({ open, onOpenChange, title, description, children, footer
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="motion-overlay fixed inset-0 z-40 bg-scrim" />
         <DialogPrimitive.Content className="motion-dialog fixed left-1/2 top-1/2 z-50 max-h-[86dvh] w-[min(92vw,400px)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-border-strong bg-overlay p-5 text-fg outline-none">
-          <DialogPrimitive.Title className="text-base font-semibold tracking-tight">{title}</DialogPrimitive.Title>
+          <DialogPrimitive.Title className="font-mono text-[15px] font-medium tracking-[-0.01em]">{title}</DialogPrimitive.Title>
           {description && <DialogPrimitive.Description className="mt-1.5 text-label text-fg-muted">{description}</DialogPrimitive.Description>}
           {children && <div className="mt-4">{children}</div>}
           {footer && <div className="mt-5 flex justify-end gap-2">{footer}</div>}
@@ -224,7 +233,7 @@ export function Modal({ open, onOpenChange, title, description, children, footer
 export function Badge({ tone = "neutral", children }) {
   return (
     <span className={cx(
-      "inline-flex items-center rounded-full border px-2 py-px text-caption font-medium",
+      "inline-flex items-center rounded-full border px-2 py-px font-mono text-caption font-medium tracking-[0.04em]",
       tone === "neutral" && "border-border-strong text-fg-muted",
       tone === "danger" && "border-danger/40 text-danger",
       tone === "accent" && "border-transparent bg-accent text-accent-fg",
@@ -238,19 +247,34 @@ export function Card({ className, children }) {
   return <div className={cx("rounded-lg border border-border bg-surface", className)}>{children}</div>;
 }
 
-// Full-page screen for settings and calendar (not a modal). Esc or the back arrow leaves it.
+// Dialogs opened without a Radix Trigger return focus to the control that opened them.
+export function useDialogReturnFocus() {
+  // Capture during render, before a menu item that opens the dialog is removed.
+  const opener = useRef(null);
+  if (!opener.current) {
+    const active = document.activeElement;
+    const menuId = active?.closest('[role="menu"]')?.id;
+    const menuTrigger = menuId && [...document.querySelectorAll("[aria-controls]")]
+      .find((node) => node.getAttribute("aria-controls") === menuId);
+    opener.current = menuTrigger || active;
+  }
+  return {
+    onCloseAutoFocus: (event) => {
+      event.preventDefault();
+      const target = opener.current?.isConnected ? opener.current : document.getElementById("chat-main");
+      target?.focus();
+    },
+  };
+}
+
+// Full-page dialog for settings and calendar. Radix owns focus and Escape handling.
 export function FullPage({ title, onBack, onClose, children, wide = false }) {
   const ref = useRef(null);
+  const returnFocus = useDialogReturnFocus();
   useEdgeBack(ref, onBack ?? onClose);
-  useEffect(() => {
-    ref.current?.focus();
-    const onKey = (e) => {
-      if (e.key === "Escape") (onBack ?? onClose)();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onBack, onClose]);
   return (
+    <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) (onBack ?? onClose)?.(); }}>
+    <DialogPrimitive.Content asChild aria-describedby={undefined} {...returnFocus} onInteractOutside={(event) => event.preventDefault()}>
     <section
       ref={ref}
       tabIndex={-1}
@@ -270,12 +294,14 @@ export function FullPage({ title, onBack, onClose, children, wide = false }) {
             <X size={19} aria-hidden="true" />
           </IconButton>
         )}
-        <h2 className="truncate text-center text-base font-semibold">{title}</h2>
+        <DialogPrimitive.Title asChild><h2 className="mono-title truncate text-center">{title}</h2></DialogPrimitive.Title>
         <span aria-hidden="true" />
       </header>
       <div className="quiet-scroll min-h-0 flex-1 overflow-y-auto px-4 pb-10 md:px-6">
         <div className={`mx-auto py-5 ${wide ? "max-w-5xl" : "max-w-xl"}`}>{children}</div>
       </div>
     </section>
+    </DialogPrimitive.Content>
+    </DialogPrimitive.Root>
   );
 }
