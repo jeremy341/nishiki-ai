@@ -343,6 +343,8 @@ Object.assign(de, {
   "How the assistant answers you.": "Wie der Assistent dir antwortet.",
   "How replies sound.": "Wie Antworten klingen.",
   "Export or delete what is stored about you.": "Exportiere oder lösche, was über dich gespeichert ist.",
+  "Interrupt by speaking: on": "Unterbrechen durch Sprechen: an",
+  "Interrupt by speaking: off": "Unterbrechen durch Sprechen: aus",
   "Sign in": "Anmelden",
   "Your private assistant": "Dein privater Assistent",
   "tap: cat's paw · hold or right-click: feed the koi": "tippen: Katzenpfote · lange drücken oder rechtsklicken: Koi füttern"

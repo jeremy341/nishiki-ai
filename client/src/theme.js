@@ -23,7 +23,7 @@ export function setTheme(value) {
   } catch {
     /* private mode: applies for this visit only */
   }
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", value === "light" ? "#f7f7f5" : "#000000");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", value === "light" ? "#e9e4da" : "#0e2a32");
 }
 
 export function toggleTheme() {

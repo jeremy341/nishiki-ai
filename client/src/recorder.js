@@ -119,7 +119,7 @@ export function startRecording({
 
   (async () => {
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     } catch (err) {
       ended = true;
       finish({ wav: null, error: err.name === "NotAllowedError" ? "not-allowed" : "microphone" });
@@ -186,3 +186,60 @@ export async function transcribe(wavBase64) {
 }
 
 export { bytesToBase64 };
+
+// Listens while the assistant is speaking and calls onSpeech() once when the person starts talking over it.
+// Echo cancellation keeps the assistant's own voice out of the signal, and the level has to stay high for
+// minMs, so a cough or a door does not interrupt. Returns { stop }.
+export function monitorSpeech({ onSpeech, threshold = 0.2, minMs = 380 } = {}) {
+  let stopped = false;
+  let stream = null;
+  let ctx = null;
+  let frame = 0;
+  const release = () => {
+    stopped = true;
+    cancelAnimationFrame(frame);
+    stream?.getTracks().forEach((t) => t.stop());
+    ctx?.close?.().catch?.(() => {});
+  };
+  (async () => {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    } catch {
+      return;
+    }
+    if (stopped) {
+      stream.getTracks().forEach((t) => t.stop());
+      return;
+    }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    ctx = new AC();
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 512;
+    ctx.createMediaStreamSource(stream).connect(analyser);
+    const buffer = new Uint8Array(analyser.fftSize);
+    let since = 0;
+    const tick = (now) => {
+      if (stopped) return;
+      analyser.getByteTimeDomainData(buffer);
+      let sum = 0;
+      for (const v of buffer) {
+        const x = (v - 128) / 128;
+        sum += x * x;
+      }
+      const level = Math.min(1, Math.sqrt(sum / buffer.length) * 3);
+      if (level > threshold) {
+        if (!since) since = now;
+        if (now - since > minMs) {
+          release();
+          onSpeech?.();
+          return;
+        }
+      } else {
+        since = 0;
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+  })().catch(() => {});
+  return { stop: release };
+}
