@@ -2,6 +2,7 @@ import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { api } from "./api.js";
 import OrbView from "./OrbView.jsx";
+import KoiBackdrop from "./ui/KoiBackdrop.jsx";
 import { useI18n } from "./i18n/context.jsx";
 import { Button, Field, IconButton, Input } from "./ui/ui.jsx";
 
@@ -29,13 +30,14 @@ export default function Login({ assistantName, onSignedIn, onBack }) {
   }
 
   return (
-    <main className="relative grid min-h-dvh place-items-center px-5 py-10">
+    <KoiBackdrop>
+    <div className="relative grid min-h-dvh w-full place-items-center px-5 py-10">
       {onBack && (
         <IconButton label={t("Back")} onClick={onBack} className="absolute left-3 top-3 size-11 !rounded-full bg-raised">
           <ArrowLeft size={18} aria-hidden="true" />
         </IconButton>
       )}
-      <div className="grid w-full max-w-sm justify-items-center gap-6">
+      <div className="grid w-full max-w-sm justify-items-center gap-6 rounded-[22px] border border-border bg-overlay p-6 shadow-sm">
         <OrbView status="idle" size={104} decorative />
         <div className="text-center">
           <h1 className="text-2xl font-semibold tracking-tight">{assistantName}</h1>
@@ -81,6 +83,7 @@ export default function Login({ assistantName, onSignedIn, onBack }) {
           </Button>
         </form>
       </div>
-    </main>
+    </div>
+    </KoiBackdrop>
   );
 }
