@@ -447,7 +447,7 @@ const ROUTES = [
   [["todoist_tasks", "todoist_add_task"], /todoist|aufgabe|task|to-?do|erledigen/i],
   [["github_inbox"], /github|issue|pull request|\bpr\b|repo|commit/i],
   [["notion_search"], /notion/i],
-  [["schedule_task", "set_reminder"], /erinner|remind|reminder|t(ä|ae)glich|daily|jeden|jede\b|every|w(ö|oe)chentlich|weekly|\bum \d|\bat \d|timer|wecker|alarm|plan|schedule|sp(ä|ae)ter|later|in \d+ (min|stund|hour|tag|day)/i],
+  [["schedule_task", "set_reminder"], /erinner|remind|reminder|aufgabe|task|\buhr\b|\d{1,2}[:.]\d{2}|o'clock|morgen|tomorrow|(ü|ue)bermorgen|heute (abend|nacht)|tonight|montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|monday|tuesday|wednesday|thursday|friday|saturday|sunday|t(ä|ae)glich|daily|jeden|jede\b|every|w(ö|oe)chentlich|weekly|\bum \d|\bat \d|timer|wecker|alarm|plan|schedule|sp(ä|ae)ter|later|in \d+ (min|stund|hour|tag|day)/i],
 ];
 
 export function routedNames(text) {

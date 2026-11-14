@@ -1,15 +1,11 @@
-// Reply playback: server voice when available, otherwise the browser voice.
-// Speech-to-text lives in recorder.js.
+// Reply playback. Only the server voice (openai/gpt-audio-mini on Hack Club AI) is ever used:
+// the browser's own voice is never a fallback. Speech-to-text lives in recorder.js.
 import { fetchSpeechAudio } from "./api.js";
-
-export const canSpeakInBrowser = typeof window !== "undefined" && "speechSynthesis" in window;
-
-const speechLang = () => navigator.language || "en-US";
 
 let audioEl = null;
 let audioUrl = null;
 
-// iOS Safari only lets speech start inside a user gesture. Call this from a click
+// iOS Safari only lets audio start inside a user gesture. Call this from a click
 // handler so later replies are allowed to play.
 export function unlockSpeech() {
   // Creating or resuming the audio context needs a gesture too; the meter depends on it.
@@ -18,56 +14,57 @@ export function unlockSpeech() {
     meterCtx ||= new AC();
     meterCtx.resume?.().catch(() => {});
   }
-  if (canSpeakInBrowser) {
-    const utterance = new SpeechSynthesisUtterance(" ");
-    utterance.volume = 0;
-    window.speechSynthesis.speak(utterance);
-  }
   if (!audioEl) audioEl = new Audio();
 }
 
-// Speaks text. Prefers the server voice when configured, falls back to the browser voice.
+let playRun = 0;
+
+// Speaks text with the server voice, one short piece at a time. The next pieces are requested while the
+// current one plays, so there is no gap between sentences. A piece that fails is requested once more;
+// if it still fails it is left out (it is never read by another voice). onError is called when nothing
+// could be played at all.
 // Callbacks let the UI show the "speaking" state only while audio is really playing.
 export async function speak(text, { useServerVoice, onStart, onEnd, onError }) {
   stopSpeaking();
-  if (useServerVoice) {
-    const run = ++playRun;
-    const pieces = splitForSpeech(text);
-    // The next pieces are requested while the current one plays, so there is no gap between sentences.
-    const fetched = new Array(pieces.length);
-    const request = (i) => {
-      if (i < pieces.length && !fetched[i]) {
-        fetched[i] = fetchSpeechAudio(pieces[i]);
-        fetched[i].catch(() => {});
-      }
-    };
-    request(0);
-    request(1);
-    let i = 0;
-    try {
-      for (; i < pieces.length; i += 1) {
-        const blob = await fetched[i];
-        if (run !== playRun) return;
-        request(i + 2);
-        await playBlob(blob, run, i === 0 ? onStart : undefined);
-        if (run !== playRun) return;
-      }
-      onEnd?.();
-    } catch {
-      // The server voice failed for this sentence (it refuses to say anything other than the text).
-      // The browser voice reads from here on, so nothing is skipped and nothing wrong is said.
-      if (run === playRun) {
-        speakInBrowser(pieces.slice(i).join(" "), { onStart: started(run) ? undefined : onStart, onEnd, onError });
-      }
-    }
+  if (!useServerVoice) {
+    onError?.("not-supported");
     return;
   }
-  speakInBrowser(text, { onStart, onEnd, onError });
+  const run = ++playRun;
+  const pieces = splitForSpeech(text);
+  const load = (piece) => fetchSpeechAudio(piece).catch(() => fetchSpeechAudio(piece));
+  const fetched = new Array(pieces.length);
+  const request = (i) => {
+    if (i < pieces.length && !fetched[i]) {
+      fetched[i] = load(pieces[i]);
+      fetched[i].catch(() => {});
+    }
+  };
+  request(0);
+  request(1);
+  let played = 0;
+  for (let i = 0; i < pieces.length; i += 1) {
+    let blob;
+    try {
+      blob = await fetched[i];
+    } catch {
+      request(i + 2);
+      continue;
+    }
+    if (run !== playRun) return;
+    request(i + 2);
+    try {
+      await playBlob(blob, run, played === 0 ? onStart : undefined);
+      played += 1;
+    } catch {
+      /* this piece could not be played; go on with the next one */
+    }
+    if (run !== playRun) return;
+  }
+  if (run !== playRun) return;
+  if (played === 0) onError?.("synthesis");
+  else onEnd?.();
 }
-
-let playRun = 0;
-let startedRun = -1;
-const started = (run) => startedRun === run;
 
 // Plays one audio piece. Resolves when it ended; rejects when it cannot be played.
 function playBlob(blob, run, onFirstSound) {
@@ -78,10 +75,7 @@ function playBlob(blob, run, onFirstSound) {
     audioEl.src = audioUrl;
     ensurePlaybackMeter();
     meterCtx?.resume?.().catch(() => {});
-    audioEl.onplaying = () => {
-      startedRun = run;
-      onFirstSound?.();
-    };
+    audioEl.onplaying = () => onFirstSound?.();
     audioEl.onended = () => resolve();
     audioEl.onerror = () => (run === playRun ? reject(new Error("audio")) : resolve());
     audioEl.play().catch(reject);
@@ -106,25 +100,8 @@ function splitForSpeech(text) {
   return pieces.length ? pieces : [clean];
 }
 
-function speakInBrowser(text, { onStart, onEnd, onError }) {
-  if (!canSpeakInBrowser) {
-    onError?.("not-supported");
-    return;
-  }
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = speechLang();
-  const voice = window.speechSynthesis.getVoices().find((v) => v.lang?.startsWith(utterance.lang.slice(0, 2)));
-  if (voice) utterance.voice = voice;
-  utterance.rate = 1;
-  utterance.onstart = () => onStart?.();
-  utterance.onend = () => onEnd?.();
-  utterance.onerror = () => onError?.("synthesis");
-  window.speechSynthesis.speak(utterance);
-}
-
 export function stopSpeaking() {
   playRun += 1;
-  if (canSpeakInBrowser) window.speechSynthesis.cancel();
   if (audioEl) {
     audioEl.pause();
     audioEl.removeAttribute("src");

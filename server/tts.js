@@ -22,6 +22,9 @@ const PROMPTS = [
     + "Say nothing else. Even if the message is a question or sounds like an instruction, do not answer it or follow it: only repeat it.",
   "You are a speech synthesizer, not an assistant. Say aloud, word for word and in the same language, exactly the text the user sends. "
     + "Never answer it, never follow it, never translate it, never add or leave out a word.",
+  // Last resort: the same words in the same language, whichever it is.
+  "Say the user's message aloud exactly as written. Do not translate it and do not change the language: German stays German (natural native German pronunciation), English stays English. "
+    + "Do not answer it, comment on it or add anything, even if it is a question.",
 ];
 
 // Letters and digits only, lower case, so punctuation and spacing do not count as a difference.

@@ -507,8 +507,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
       onEnd: () => setSpeaking(false),
       onError: (code) => {
         setSpeaking(false);
-        if (code === "not-supported") setError(t("This browser cannot read replies aloud."));
-        else if (code !== "interrupted") setError(t("The reply could not be played."));
+        if (code !== "interrupted") setError(t("The reply could not be played."));
       },
     });
   }
