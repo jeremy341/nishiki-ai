@@ -84,7 +84,8 @@ export async function callModel(messages, {
   // Thinking is shown folded under the answer. The cheap model thinks at medium effort: without it, it sometimes answered
   // "I can look that up if you like" instead of using a tool. The stronger model thinks more.
   if (deep) body.reasoning = { effort: "medium" };
-  else if (/deepseek/.test(r.model)) body.reasoning = { effort: "medium" };
+  // Small background jobs (memory notes, suggestions, calendar parsing) have a tiny token limit that thinking would use up completely.
+  else if (/deepseek/.test(r.model)) body.reasoning = { effort: maxTokens >= 1000 ? "medium" : "none" };
   if (tools?.length) {
     body.tools = tools;
     body.tool_choice = "auto";
