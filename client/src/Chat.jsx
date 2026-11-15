@@ -1041,6 +1041,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
             files={files}
             onAttach={(kind) => ({ camera: cameraInputRef, photos: photoInputRef, files: documentInputRef })[kind]?.current?.click()}
             onRemoveFile={removeFile}
+            onPasteFiles={addFiles}
             micState={micState}
             onMic={toggleMic}
             levels={levels}

@@ -51,7 +51,7 @@ function RecordingBar({ levels, transcribing, onCancel, onStop, onSend }) {
 // when there is something to send. Enter sends on desktop; on phones Enter starts a new line and the arrow is used.
 export default function Composer({
   value, onChange, onSend, canSend, busy,
-  files, onAttach, onRemoveFile,
+  files, onAttach, onRemoveFile, onPasteFiles,
   micState, onMic, onTalk, voiceOff = false,
   levels, onCancelRecording, onStopRecording, onSendRecording,
   calendarOn, useCalendar, onToggleCalendar,
@@ -171,6 +171,13 @@ export default function Composer({
               value={value}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={onKeyDown}
+              onPaste={(event) => {
+                // A copied picture or file (a screenshot, an image from a web page) is attached; plain text pastes as usual.
+                const copied = Array.from(event.clipboardData?.files || []);
+                if (!copied.length) return;
+                event.preventDefault();
+                onPasteFiles?.(copied);
+              }}
               placeholder={t("Ask anything")}
               rows={1}
               maxLength={4000}

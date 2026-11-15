@@ -151,7 +151,9 @@ async function calendarFetch(userId, path, init = {}) {
     throw new AppError(502, "Google Calendar rejected the request. Try again.");
   }
   if (!response.ok) {
-    console.warn("Google Calendar HTTP", response.status);
+    // The reason Google gives (for example "Invalid value for: start.dateTime") helps to find the cause; it holds no personal data.
+    const detail = await response.json().then((j) => `${j?.error?.errors?.[0]?.reason || ""} ${j?.error?.message || ""}`.trim()).catch(() => "");
+    console.warn("Google Calendar HTTP", response.status, detail.slice(0, 160));
     throw new AppError(502, "Google Calendar returned an error.");
   }
   return response.json();
@@ -178,13 +180,16 @@ export async function listUpcomingEvents(userId, days = 7) {
   }));
 }
 
+// Google wants seconds in a date and time ("2026-11-17T13:30:00"); the assistant writes them without ("2026-11-17T13:30").
+const withSeconds = (value) => (/T\d\d:\d\d$/.test(String(value)) ? `${value}:00` : value);
+
 export async function createEvent(userId, { title, start, end, timeZone }) {
   const event = await calendarFetch(userId, "/calendars/primary/events", {
     method: "POST",
     body: JSON.stringify({
       summary: title,
-      start: { dateTime: start, timeZone },
-      end: { dateTime: end, timeZone },
+      start: { dateTime: withSeconds(start), timeZone },
+      end: { dateTime: withSeconds(end), timeZone },
     }),
   });
   return { id: event.id, title: event.summary, start: event.start?.dateTime, end: event.end?.dateTime };
