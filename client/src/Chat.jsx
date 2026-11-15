@@ -906,10 +906,17 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
   return (
     <div className="flex w-full overflow-hidden" style={{ height: "var(--app-h, 100dvh)" }}>
       <a href="#chat-main" onClick={() => document.getElementById("chat-main")?.focus()} className="sr-only z-[70] rounded-md bg-accent px-4 py-3 text-sm font-medium text-accent-fg focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:outline-2 focus:outline-offset-2 focus:outline-fg">{t("Skip to chat")}</a>
-      {/* Wide screens: the chat list is always visible */}
-      <aside className={`hidden min-w-0 w-72 shrink-0 flex-col overflow-hidden border-r border-border bg-surface px-3 pb-3 pt-5 ${!sidebarShown ? "" : viewing ? "xl:flex" : "md:flex"}`} aria-label={t("Chats")}>
-        {sidebarHeader}
-        {renderSidebar(false)}
+      {/* Keep the desktop sidebar mounted so its width can animate in both directions. */}
+      <aside
+        aria-label={t("Chats")}
+        aria-hidden={!sidebarShown}
+        {...(sidebarShown ? {} : { inert: "" })}
+        className={`hidden shrink-0 overflow-hidden bg-surface transition-[width,opacity] duration-[var(--dur-slow)] ease-[var(--ease-snappy)] motion-reduce:transition-none ${viewing ? "xl:flex" : "md:flex"} ${sidebarShown ? "w-72 border-r border-border opacity-100" : "w-0 opacity-0"}`}
+      >
+        <div className="flex h-full w-72 shrink-0 flex-col px-3 pb-3 pt-5">
+          {sidebarHeader}
+          {renderSidebar(false)}
+        </div>
       </aside>
 
       {/* Phones: the same list in a drawer */}
@@ -917,7 +924,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
       <aside
         aria-label={`${assistantName} chats`}
         {...(chatsOpen ? {} : { inert: "" })}
-        className="fixed inset-y-0 left-0 z-0 flex w-[min(86vw,300px)] flex-col border-r border-border bg-surface pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-40 after:bg-surface after:content-[''] md:hidden"
+        className={`fixed inset-y-0 left-0 z-0 flex w-[min(86vw,300px)] flex-col border-r border-border bg-surface pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] transition-[transform,opacity] duration-[var(--dur-slow)] ease-[var(--ease-sheet)] motion-reduce:transition-none after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-40 after:bg-surface after:content-[''] md:hidden ${chatsOpen ? "translate-x-0 opacity-100" : "-translate-x-3 opacity-80"}`}
       >
         <div className="flex items-center justify-between gap-2 px-3 pt-4">
           {sidebarHeader}
@@ -936,8 +943,8 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
         />
       )}
 
-      <main id="chat-main" tabIndex={-1} className={`relative z-10 flex min-w-0 flex-1 flex-col bg-canvas outline-none transition-[transform,border-radius] duration-300 ease-out md:transform-none md:rounded-none ${
-        chatsOpen ? "translate-x-[min(86vw,300px)] overflow-hidden rounded-l-[22px] shadow-2xl" : ""
+      <main id="chat-main" tabIndex={-1} className={`relative z-10 flex min-w-0 flex-1 flex-col bg-canvas outline-none transition-transform duration-[var(--dur-slow)] ease-[var(--ease-sheet)] motion-reduce:transition-none md:transform-none ${
+        chatsOpen ? "translate-x-[min(86vw,300px)]" : ""
       }`}>
         {/* A new chat is the home screen: the pond fills the screen behind the header, the orb and the pill. Conversations are quiet: no koi. */}
         {showHome && (
