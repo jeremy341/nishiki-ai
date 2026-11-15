@@ -43,6 +43,8 @@ const de = {
   "Add a photo or file": "Foto oder Datei hinzufügen",
   "Conversation mode": "Gesprächsmodus",
   "Sources": "Quellen",
+  "Voice is switched off for now": "Sprache ist vorübergehend aus",
+  "Voice conversations are switched off for now.": "Sprachgespräche sind vorübergehend aus.",
   "The daily limit for voice conversations is reached. Typing in the chat still works, and voice is available again later.": "Das Tageslimit für Sprachgespräche ist erreicht. Schreiben im Chat geht weiter, Sprache ist später wieder verfügbar.",
   "Thoughts": "Gedanken",
   "Assistant": "Assistent",

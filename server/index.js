@@ -291,6 +291,7 @@ app.get("/api/me", (req, res) => {
       google: googleConfigured(),
       serverTts: serverTtsConfigured(),
       liveVoice: liveVoiceAvailable(),
+      voiceMode: config.voice.enabled,
       maxAttachmentMb: MAX_ATTACHMENT_BYTES / (1024 * 1024),
     },
     google: user ? googleStatus(user.id) : null,
@@ -708,6 +709,7 @@ app.post("/api/voice/turn", requireUser, chatLimiter, express.json({ limit: "9mb
     conversationId: z.number().int().positive().nullable().optional(),
     audio: z.string().min(100).max(6_500_000),
   }), req.body);
+  if (!config.voice.enabled) throw new AppError(403, "Voice conversations are switched off for now.");
   const bytes = Buffer.from(audio, "base64");
   const isWav = bytes.length > 44 && bytes.subarray(0, 4).toString("ascii") === "RIFF"
     && bytes.subarray(8, 12).toString("ascii") === "WAVE";

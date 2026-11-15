@@ -825,6 +825,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
   }
 
   function openVoice() {
+    if (!features.voiceMode) return;
     unlockSpeech();
     setVoiceOpen(true);
   }
@@ -929,6 +930,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
           <Home
             username={user?.username}
             onTalk={openVoice}
+            voiceOff={!features.voiceMode}
             onOpenCalendar={features.google ? () => setCalendarOpen(true) : undefined}
             headerRef={headerRef}
             dockRef={dockRef}
@@ -1038,6 +1040,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
             onStopRecording={() => stopDictation("keep")}
             onSendRecording={() => stopDictation("send")}
             onTalk={openVoice}
+            voiceOff={!features.voiceMode}
             calendarOn={calendarOn}
             useCalendar={useCalendar}
             onToggleCalendar={() => setUseCalendar((v) => !v)}

@@ -52,7 +52,7 @@ function RecordingBar({ levels, transcribing, onCancel, onStop, onSend }) {
 export default function Composer({
   value, onChange, onSend, canSend, busy,
   files, onAttach, onRemoveFile,
-  micState, onMic, onTalk,
+  micState, onMic, onTalk, voiceOff = false,
   levels, onCancelRecording, onStopRecording, onSendRecording,
   calendarOn, useCalendar, onToggleCalendar,
 }) {
@@ -198,7 +198,15 @@ export default function Composer({
               <ArrowUp size={20} strokeWidth={1.75} aria-hidden="true" />
             </button>
           ) : (
-            <button type="button" onClick={onTalk} aria-label={t("Conversation mode")} className={`${ROUND} bg-fg [&>span]:!text-canvas`}>
+            <button
+              type="button"
+              onClick={onTalk}
+              disabled={voiceOff}
+              aria-disabled={voiceOff}
+              aria-label={voiceOff ? t("Voice is switched off for now") : t("Conversation mode")}
+              title={voiceOff ? t("Voice is switched off for now") : undefined}
+              className={`${ROUND} bg-fg [&>span]:!text-canvas ${voiceOff ? "cursor-not-allowed opacity-35 grayscale" : ""}`}
+            >
               <HomeOrb size={24} ring={false} spin={false} />
             </button>
           )}

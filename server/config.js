@@ -56,6 +56,8 @@ export const config = {
     maxTokens: Number(env("VOICE_MAX_TOKENS", "900")),
     // Spoken audio is the most expensive part of a chat, so each person gets this many voice turns per day (0 = no limit).
     dailyTurns: Number(env("VOICE_DAILY_TURNS", "80")),
+    // Voice conversations are switched off for now (set VOICE_ENABLED=1 to turn them on again).
+    enabled: env("VOICE_ENABLED", "0") === "1",
   },
   tts: {
     enabled: env("TTS_ENABLED", "1") !== "0",
