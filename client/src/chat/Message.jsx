@@ -33,7 +33,7 @@ function Fold({ label, children, defaultOpen = false }) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="caption pressable -ml-1 inline-flex min-h-8 items-center gap-1.5 rounded px-1 text-fg-subtle hover:text-fg"
+        className="caption pressable -ml-1 inline-flex min-h-8 items-center gap-1.5 rounded px-1 text-fg-subtle hover:text-fg pointer-coarse:min-h-11"
       >
         <ChevronRight size={14} strokeWidth={1.5} aria-hidden="true" className={`transition-transform duration-150 ${open ? "rotate-90" : ""}`} />
         {label}

@@ -179,6 +179,27 @@
     background: var(--canvas);
   }
 
+  /* iPhones give date and time fields a fixed width of their own and let them run past the edge of the screen. */
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="week"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    text-align: left;
+  }
+  input[type="date"]::-webkit-date-and-time-value,
+  input[type="time"]::-webkit-date-and-time-value,
+  input[type="datetime-local"]::-webkit-date-and-time-value {
+    text-align: left;
+    min-width: 0;
+  }
+
   body {
     margin: 0;
     background: var(--canvas);
@@ -191,6 +212,25 @@
     text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     overflow: hidden;
+  }
+
+  /* Phones: no double-tap zoom or tap delay on controls, and no rubber-band pull on the page itself
+     (the lists inside scroll on their own). */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+  button,
+  a,
+  input,
+  select,
+  textarea,
+  label,
+  summary,
+  [role="button"],
+  [role="tab"],
+  [role="menuitem"] {
+    touch-action: manipulation;
   }
 
   :focus-visible {

@@ -43,6 +43,8 @@ function todayLine({ event, reminders }) {
 const WAVE = "M1 4c4.5-4.6 8.5-4.6 13 0s8.5 4.6 13 0 8.5-4.6 13 0 8.5 4.6 13 0 8.5-4.6 13 0";
 
 export default function Home({ username, onTalk, voiceOff = false, onOpenCalendar, headerRef, dockRef, paused = false }) {
+  // On a short screen (iPhone SE) the orb is smaller so the greeting and the message box still fit.
+  const orbSize = typeof window !== "undefined" && window.innerHeight < 660 ? 124 : 176;
   const [today, setToday] = useState(null);
   const [pad, setPad] = useState({ top: 48, bottom: 88 });
   const greeting = useRef(t(greetingKey())).current;
@@ -113,7 +115,7 @@ export default function Home({ username, onTalk, voiceOff = false, onOpenCalenda
               onClick={() => { haptic("tap"); onTalk?.(); }}
               className={`pointer-events-auto grid shrink-0 place-items-center rounded-full text-fg focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-accent [-webkit-tap-highlight-color:transparent] ${voiceOff ? "cursor-not-allowed opacity-35 grayscale" : "pressable"}`}
             >
-              <HomeOrb size={176} />
+              <HomeOrb size={orbSize} />
             </button>
             <p ref={hintRef} className="caption mt-2 max-w-[min(300px,calc(100vw-56px))] text-center">{voiceOff ? t("Voice is switched off for now") : t("Tap the orb to talk")}</p>
           </div>

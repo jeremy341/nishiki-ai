@@ -71,7 +71,7 @@ export function IconButton({ label, active = false, className, children, ...prop
 
 export function Field({ label, hint, children, className }) {
   return (
-    <label className={cx("grid gap-1.5", className)}>
+    <label className={cx("grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1.5", className)}>
       {label && <span className="text-label font-medium text-fg-muted">{label}</span>}
       {children}
       {hint && <span className="hint">{hint}</span>}
@@ -106,11 +106,11 @@ export function Switch({ checked, onCheckedChange, label, disabled }) {
         onCheckedChange={onCheckedChange}
         disabled={disabled}
         className={cx(
-          "relative mt-px h-5 w-9 shrink-0 rounded-full bg-raised ring-1 ring-inset ring-border-strong transition-colors duration-150",
+          "relative mt-px h-5 w-9 shrink-0 pointer-coarse:h-[31px] pointer-coarse:w-[51px] rounded-full bg-raised ring-1 ring-inset ring-border-strong transition-colors duration-150",
           "data-[state=checked]:bg-accent data-[state=checked]:ring-transparent disabled:opacity-40", FOCUS,
         )}
       >
-        <SwitchPrimitive.Thumb className="block size-4 translate-x-0.5 rounded-full bg-fg-muted transition-transform duration-150 data-[state=checked]:translate-x-[18px] data-[state=checked]:bg-accent-fg" />
+        <SwitchPrimitive.Thumb className="block size-4 translate-x-0.5 rounded-full bg-fg-muted transition-transform duration-150 pointer-coarse:size-[27px] data-[state=checked]:translate-x-[18px] pointer-coarse:data-[state=checked]:translate-x-[22px] data-[state=checked]:bg-accent-fg" />
       </SwitchPrimitive.Root>
       <span className="text-label font-medium leading-[22px] text-fg">{label}</span>
     </label>
@@ -127,7 +127,7 @@ export function Tabs({ value, onValueChange, items, className }) {
             key={item.value}
             value={item.value}
             className={cx(
-              "relative -mb-px h-10 shrink-0 whitespace-nowrap border-b-2 border-transparent font-mono text-[13px] font-medium text-fg-muted transition-colors duration-150",
+              "relative -mb-px h-10 pointer-coarse:h-11 pointer-coarse:min-w-11 shrink-0 whitespace-nowrap border-b-2 border-transparent font-mono text-[13px] font-medium text-fg-muted transition-colors duration-150",
               "hover:text-fg data-[state=active]:border-accent data-[state=active]:text-fg", FOCUS_INSET,
             )}
           >

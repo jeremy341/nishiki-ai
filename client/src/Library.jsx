@@ -84,7 +84,7 @@ export default function Library({ onClose, onOpenChat, onOpenFile }) {
                 <TabsPrimitive.Trigger
                   key={f.value}
                   value={f.value}
-                  className={`pressable -mb-px h-11 border-b-2 font-mono text-[13px] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${
+                  className={`pressable -mb-px h-11 min-w-11 border-b-2 font-mono text-[13px] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${
                     filter === f.value ? "border-accent text-fg" : "border-transparent text-fg-muted hover:text-fg"
                   }`}
                 >

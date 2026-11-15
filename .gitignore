@@ -15,3 +15,8 @@ data-demo/
 *.log
 
 server-real.err
+
+# Phone UI audit output (screenshots, results)
+bench/ui-audit/out*/
+bench/ui-audit/sheets/
+bench/ui-audit/run*.txt

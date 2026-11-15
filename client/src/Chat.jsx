@@ -259,10 +259,18 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
     }
   }, [notice, clearNotice]);
 
+  const shownCount = useRef(0);
   useEffect(() => {
     const feed = feedRef.current;
+    // Opening a chat jumps straight to its end (and once more when charts and images have taken their height).
     // While the answer is being written the page follows it at once; a smooth scroll would lag behind.
-    if (feed) feed.scrollTo({ top: feed.scrollHeight, behavior: streamText ? "auto" : "smooth" });
+    const opened = shownCount.current === 0 || Math.abs(messages.length - shownCount.current) > 2;
+    shownCount.current = messages.length;
+    if (!feed) return undefined;
+    feed.scrollTo({ top: feed.scrollHeight, behavior: streamText || opened ? "auto" : "smooth" });
+    if (!opened) return undefined;
+    const later = setTimeout(() => feed.scrollTo({ top: feed.scrollHeight, behavior: "auto" }), 400);
+    return () => clearTimeout(later);
   }, [messages, busy, streamText]);
 
   function handleError(err) {
@@ -1023,7 +1031,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
           </p>
         )}
 
-        <div ref={dockRef} className="relative z-10 shrink-0 px-5 pb-[max(28px,env(safe-area-inset-bottom))] pt-2 md:px-6 md:pb-[max(14px,env(safe-area-inset-bottom))]">
+        <div ref={dockRef} className="relative z-10 shrink-0 px-3 min-[360px]:px-5 pb-[max(28px,env(safe-area-inset-bottom))] pt-2 md:px-6 md:pb-[max(14px,env(safe-area-inset-bottom))]">
           <Composer
             value={input}
             onChange={setInput}
