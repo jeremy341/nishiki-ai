@@ -5,7 +5,7 @@ import { t } from "../i18n/index.js";
 // controls (36px, 44px on touch), 8px cards and menus, 12px dialogs and sheets, hairlines instead of shadows (one
 // faint one under menus), titles in the serif at weight 500, thin 1.5px line icons, vermilion only for the
 // primary action and the current choice. Nothing here is rounder than 12px (badges and the switch aside).
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as DropdownPrimitive from "@radix-ui/react-dropdown-menu";
 import * as SwitchPrimitive from "@radix-ui/react-switch";
@@ -271,10 +271,24 @@ export function useDialogReturnFocus() {
 // Full-page dialog for settings and calendar. Radix owns focus and Escape handling.
 export function FullPage({ title, onBack, onClose, children, wide = false }) {
   const ref = useRef(null);
+  const exitTimer = useRef(null);
+  const [exiting, setExiting] = useState(false);
   const returnFocus = useDialogReturnFocus();
-  useEdgeBack(ref, onBack ?? onClose);
+  useEffect(() => () => clearTimeout(exitTimer.current), []);
+  // Delay the close callback just long enough to show the page leaving.
+  // "Back" changes the current settings section and should stay immediate.
+  const closeWithMotion = () => {
+    if (!onClose || exiting) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      onClose();
+      return;
+    }
+    setExiting(true);
+    exitTimer.current = setTimeout(onClose, 150);
+  };
+  useEdgeBack(ref, onBack ?? closeWithMotion);
   return (
-    <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) (onBack ?? onClose)?.(); }}>
+    <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) (onBack ?? closeWithMotion)(); }}>
     <DialogPrimitive.Content asChild aria-describedby={undefined} {...returnFocus} onInteractOutside={(event) => event.preventDefault()}>
     <section
       ref={ref}
@@ -282,7 +296,7 @@ export function FullPage({ title, onBack, onClose, children, wide = false }) {
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      className="fixed inset-0 z-50 flex flex-col bg-canvas pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] outline-none animate-enter"
+      className={`fixed inset-0 z-50 flex flex-col bg-canvas pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] outline-none ${exiting ? "motion-page-exit" : "motion-page-enter"}`}
     >
       {/* Close (or back) on the left, the title centred, nothing on the right; a hairline under the header. */}
       <header className="grid h-14 shrink-0 grid-cols-[2.75rem_1fr_2.75rem] items-center border-b border-border px-2">
@@ -291,7 +305,7 @@ export function FullPage({ title, onBack, onClose, children, wide = false }) {
             <ArrowLeft size={19} aria-hidden="true" />
           </IconButton>
         ) : (
-          <IconButton label={t("Close")} onClick={onClose} className="size-11">
+          <IconButton label={t("Close")} onClick={closeWithMotion} className="size-11">
             <X size={19} aria-hidden="true" />
           </IconButton>
         )}

@@ -292,7 +292,7 @@ export default function FileViewer({ file, onClose, onConverted, onSummarized, w
       role={mobile ? undefined : "region"}
       aria-label={file.name}
       style={{ "--viewer-w": `${width}px` }}
-      className="fixed inset-0 z-50 flex flex-col bg-canvas pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] md:relative md:z-auto md:h-full md:w-[var(--viewer-w)] md:shrink-0 md:border-l md:border-border"
+      className="motion-file-viewer fixed inset-0 z-50 flex flex-col bg-canvas pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] md:relative md:z-auto md:h-full md:w-[var(--viewer-w)] md:shrink-0 md:border-l md:border-border"
     >
       {onResize && (
         <div

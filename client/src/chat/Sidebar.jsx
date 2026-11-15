@@ -168,13 +168,15 @@ function ProjectRow({ project, chats, open, onToggle, onNewChat, onEdit, onDelet
           <MenuItem icon={Trash2} destructive onSelect={() => onDelete(project)}>{t("Delete project")}</MenuItem>
         </Menu>
       </div>
-      {open && (
-        <div className="ml-4 border-l border-border pl-1">
-          {chats.length ? <ChatList chats={chats} {...rest} /> : (
-            <p className="caption px-3 py-2 normal-case">{t("No chats in this project yet.")}</p>
-          )}
+      <div className="motion-collapse" data-open={open} {...(open ? {} : { inert: "" })}>
+        <div className="motion-collapse-inner">
+          <div className="ml-4 border-l border-border pl-1">
+            {chats.length ? <ChatList chats={chats} {...rest} /> : (
+              <p className="caption px-3 py-2 normal-case">{t("No chats in this project yet.")}</p>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

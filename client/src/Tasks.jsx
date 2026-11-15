@@ -5,6 +5,7 @@ import { api } from "./api.js";
 import { currentLocale, t } from "./i18n/index.js";
 import KoiEmpty from "./ui/KoiEmpty.jsx";
 import KoiGlyph from "./ui/KoiGlyph.jsx";
+import StaggerOnce from "./ui/StaggerOnce.jsx";
 import { Button, Field, FullPage, IconButton, Input, Modal, Select, Sheet, Switch, Textarea } from "./ui/ui.jsx";
 
 // Scheduled tasks: a question that the assistant answers by itself, once, every day or every week.
@@ -197,7 +198,7 @@ export default function Tasks({ onClose, onOpenChat }) {
         )}
 
         {tasks?.length > 0 && (
-          <ul className="divide-y divide-border">
+          <StaggerOnce className="divide-y divide-border">
             {tasks.map((task) => (
               <li key={task.id} className="grid gap-2.5 py-5 first:pt-1">
                 <div className="flex min-h-11 items-start justify-between gap-4">
@@ -229,7 +230,7 @@ export default function Tasks({ onClose, onOpenChat }) {
                 </div>
               </li>
             ))}
-          </ul>
+          </StaggerOnce>
         )}
       </div>
 

@@ -407,6 +407,30 @@
 .motion-sheet-bottom[data-state="open"] { animation: egg-sheet-in var(--dur-slow) var(--ease-sheet); }
 .motion-sheet-bottom[data-state="closed"] { animation: egg-sheet-out 220ms var(--ease-sheet) forwards; }
 
+/* Expand sections without instantly removing their contents from layout. */
+.motion-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows var(--dur-base) var(--ease-snappy), opacity var(--dur-fast) var(--ease-snappy);
+}
+.motion-collapse[data-open="true"] { grid-template-rows: 1fr; opacity: 1; }
+.motion-collapse-inner { min-height: 0; overflow: hidden; }
+
+/* Full-page navigation and the file viewer stay quieter than the pond itself. */
+@keyframes page-in { from { opacity: 0; transform: translateY(4px); } }
+@keyframes page-out { to { opacity: 0; transform: translateY(4px); } }
+@keyframes viewer-in { from { opacity: 0; transform: translateX(12px); } }
+.motion-page-enter { animation: page-in var(--dur-enter) var(--ease-snappy) backwards; }
+.motion-page-exit { animation: page-out 150ms var(--ease-snappy) forwards; }
+.motion-file-viewer { animation: egg-fade-in var(--dur-base) var(--ease-snappy) backwards; }
+@media (min-width: 768px) {
+  .motion-file-viewer { animation: viewer-in var(--dur-slow) var(--ease-snappy) backwards; }
+}
+
+/* The initial list reveal must not replay when data is refreshed or rows update. */
+.motion-stagger[data-settled] > * { animation: none; }
+
 /* ---- Koi motifs (DESIGN.md) ---- */
 
 /* A line of tiny waves between big sections. */

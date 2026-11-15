@@ -6,6 +6,7 @@ import { api } from "./api.js";
 import { currentLocale, t } from "./i18n/index.js";
 import KoiEmpty from "./ui/KoiEmpty.jsx";
 import KoiGlyph from "./ui/KoiGlyph.jsx";
+import StaggerOnce from "./ui/StaggerOnce.jsx";
 import { Button, FullPage, IconButton, Modal } from "./ui/ui.jsx";
 
 // The Library: every file you sent or received, kept on this server. Images show as previews.
@@ -103,7 +104,7 @@ export default function Library({ onClose, onOpenChat, onOpenFile }) {
               ))}
 
               {items.length > 0 && (
-                <ul className="divide-y divide-border">
+                <StaggerOnce className="divide-y divide-border">
                   {items.map((item) => (
                     <li key={item.id} className="flex min-h-16 items-center gap-4 py-2.5">
                       {item.kind === "image" ? (
@@ -134,7 +135,7 @@ export default function Library({ onClose, onOpenChat, onOpenFile }) {
                       </div>
                     </li>
                   ))}
-                </ul>
+                </StaggerOnce>
               )}
             </TabsPrimitive.Content>
           </TabsPrimitive.Root>
