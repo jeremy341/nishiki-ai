@@ -922,7 +922,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
       )}
 
       <main id="chat-main" tabIndex={-1} className={`relative z-10 flex min-w-0 flex-1 flex-col bg-canvas outline-none transition-[transform,border-radius] duration-300 ease-out md:transform-none md:rounded-none ${
-        chatsOpen ? "origin-left translate-x-[min(86vw,300px)] scale-[0.92] overflow-hidden rounded-[22px] shadow-2xl" : ""
+        chatsOpen ? "translate-x-[min(86vw,300px)] overflow-hidden rounded-l-[22px] shadow-2xl" : ""
       }`}>
         {/* A new chat is the home screen: the pond fills the screen behind the header, the orb and the pill. Conversations are quiet: no koi. */}
         {showHome && (
