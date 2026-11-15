@@ -32,9 +32,9 @@ function askHidden(question) {
   });
 }
 
-const password = await askHidden("New password (min. 10 characters): ");
-if (password.length < 10) {
-  console.error("Password too short. Use at least 10 characters.");
+const password = await askHidden("New password (min. 8 characters): ");
+if (password.length < 8) {
+  console.error("Password too short. Use at least 8 characters.");
   process.exit(1);
 }
 const again = await askHidden("Repeat password: ");
