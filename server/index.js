@@ -260,6 +260,24 @@ app.post("/api/logout", (req, res) => {
   res.json({ ok: true });
 });
 
+// Streaming check: five small events, one per second. If a proxy in front of the app holds the stream back, they arrive all at once.
+app.get("/api/stream-test", (req, res) => {
+  res.set({ "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no" });
+  res.flushHeaders();
+  let n = 0;
+  const timer = setInterval(() => {
+    n += 1;
+    res.write(`data: ${JSON.stringify({ n, at: Date.now() })}
+
+`);
+    if (n >= 5) {
+      clearInterval(timer);
+      res.end();
+    }
+  }, 1000);
+  res.on("close", () => clearInterval(timer));
+});
+
 app.get("/api/me", (req, res) => {
   const user = currentUser(req);
   res.json({
