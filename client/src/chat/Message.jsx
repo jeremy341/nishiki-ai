@@ -38,7 +38,9 @@ function Fold({ label, children, defaultOpen = false }) {
         <ChevronRight size={14} strokeWidth={1.5} aria-hidden="true" className={`transition-transform duration-150 ${open ? "rotate-90" : ""}`} />
         {label}
       </button>
-      {open && <div className="motion-enter mt-1">{children}</div>}
+      <div className="motion-collapse mt-1" data-open={open} {...(open ? {} : { inert: "" })}>
+        <div className="motion-collapse-inner">{children}</div>
+      </div>
     </div>
   );
 }
@@ -231,7 +233,9 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
         <div className="-ml-[13px] mt-0.5 flex items-center opacity-100 transition-opacity duration-150 md:-ml-[9px] md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
           {message.content && (
             <IconButton label={copied ? t("Copied") : t("Copy answer")} onClick={copy} className="size-11 !text-fg-subtle hover:!text-fg md:size-9">
-              {copied ? <Check size={18} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={18} strokeWidth={1.5} aria-hidden="true" />}
+              <span key={copied ? "copied" : "copy"} className={copied ? "motion-swap inline-grid" : "inline-grid"}>
+                {copied ? <Check size={18} strokeWidth={1.5} aria-hidden="true" /> : <Copy size={18} strokeWidth={1.5} aria-hidden="true" />}
+              </span>
             </IconButton>
           )}
           {message.content && onSaveNote && (
