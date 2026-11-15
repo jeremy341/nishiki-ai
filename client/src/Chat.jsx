@@ -111,7 +111,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
   const [speaking, setSpeaking] = useState(false);
   const [speakReplies, setSpeakReplies] = useState(() => readPref("speakReplies", false));
   const [theme, setThemeState] = useState(() => effectiveTheme());
-  const [useCalendar, setUseCalendar] = useState(false);
+  const [useCalendar] = useState(true); // the calendar is shared whenever the Calendar app is on in Settings
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [chatsOpen, setChatsOpen] = useState(false);

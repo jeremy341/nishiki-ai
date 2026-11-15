@@ -166,7 +166,7 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
         <p className="caption mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
           {message.activity.map((label) => (
             <span key={label} className="inline-flex items-center gap-1.5">
-              <Check size={12} aria-hidden="true" /> {label}
+              <Check size={12} aria-hidden="true" /> {t(label)}
             </span>
           ))}
         </p>

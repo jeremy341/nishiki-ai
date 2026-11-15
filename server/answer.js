@@ -74,7 +74,7 @@ export async function answerConversation({ userId, conversationId, useCalendar =
     system.push({ role: "system", content: `Always answer in ${prefs.language === "de" ? "German" : "English"}.` });
   } else {
     const fallback = prefs.uiLanguage === "en" ? "English" : "German";
-    system.push({ role: "system", content: `Answer in the language of the user's latest message. If it is unclear, or only a single word, answer in ${fallback}. Never switch to English on your own.` });
+    system.push({ role: "system", content: `Reply in the language of the user's latest message: a message written in English gets an English reply, a message written in German gets a German reply, and the same for any other language. Only when the message has no clear language (a single word, numbers, an emoji) reply in ${fallback}.` });
   }
   if (prefs.personality !== "balanced") {
     system.push({

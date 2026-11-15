@@ -16,6 +16,10 @@ import { makePresentation } from "./slides.js";
 import { createTask, describeTask, zonedToUtc } from "./scheduled.js";
 import { addMemory, deleteMemory } from "./memory.js";
 import { fetchInboxHeaders, mailCredentials } from "./mail.js";
+import { getPrefs } from "./prefs.js";
+
+// Texts the person reads on confirmation cards and after confirming are in the interface language (German unless set to English).
+const tr = (userId, en, de) => (getPrefs(userId).uiLanguage === "en" ? en : de);
 
 const NEEDS_EXA = new Set(["web_search", "read_web_page"]);
 
@@ -608,7 +612,7 @@ const HANDLERS = {
     }
     return addPending(ctx, {
       kind: "calendar_add",
-      title: `Add “${title}” to your calendar`,
+      title: tr(ctx.userId, `Add “${title}” to your calendar`, `„${title}“ in deinen Kalender eintragen`),
       details: `${start.replace("T", " ")} – ${end.replace("T", " ")}`,
       payload: { title, start, end, timeZone: config.timezone },
     });
@@ -630,7 +634,7 @@ const HANDLERS = {
     const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(args.run_at || "");
     if (!m) throw new AppError(400, "For a reminder, give run_at as YYYY-MM-DDTHH:mm.");
     const input = {
-      title: `Erinnerung: ${text}`.slice(0, 80),
+      title: `${tr(ctx.userId, "Reminder", "Erinnerung")}: ${text}`.slice(0, 80),
       prompt: `Erinnere den Nutzer kurz und freundlich an: ${text}. Antworte nur mit dieser Erinnerung, ohne Rückfragen.`,
       mode: "once",
       tz: config.timezone,
@@ -639,8 +643,8 @@ const HANDLERS = {
     describeTask(input); // throws a readable error if the time is in the past
     return addPending(ctx, {
       kind: "task_create",
-      title: `Erinnerung “${text}”`,
-      details: `einmalig, ${args.run_at.replace("T", " ")}`,
+      title: tr(ctx.userId, `Reminder “${text}”`, `Erinnerung „${text}“`),
+      details: `${tr(ctx.userId, "once", "einmalig")}, ${args.run_at.replace("T", " ")}`,
       payload: input,
     });
   },
@@ -666,7 +670,7 @@ const HANDLERS = {
     describeTask(input); // throws a readable error if the schedule is not valid or never runs
     return addPending(ctx, {
       kind: "task_create",
-      title: `Schedule “${title}”`,
+      title: tr(ctx.userId, `Schedule “${title}”`, `„${title}“ planen`),
       details,
       payload: input,
     });
@@ -708,7 +712,7 @@ const HANDLERS = {
     if (!note) throw new AppError(404, "That note does not exist.");
     return addPending(ctx, {
       kind: "note_delete",
-      title: "Delete this note",
+      title: tr(ctx.userId, "Delete this note", "Diese Notiz löschen"),
       details: note.text.slice(0, 120),
       payload: { id: note.id },
     });
@@ -725,7 +729,7 @@ const HANDLERS = {
     const body = requireString(args.body, "body", 8000);
     return addPending(ctx, {
       kind: "gmail_send",
-      title: `Send mail to ${to}`,
+      title: tr(ctx.userId, `Send mail to ${to}`, `E-Mail an ${to} senden`),
       details: subject,
       payload: { to, subject, body },
     });
@@ -769,7 +773,7 @@ const HANDLERS = {
     const due = args.due ? requireString(args.due, "due", 100) : "";
     return addPending(ctx, {
       kind: "todoist_add",
-      title: "Add a Todoist task",
+      title: tr(ctx.userId, "Add a Todoist task", "Todoist-Aufgabe hinzufügen"),
       details: due ? `${content} · ${due}` : content,
       payload: { content, due },
     });
@@ -815,7 +819,7 @@ const HANDLERS = {
     if (!memory) throw new AppError(404, "That memory does not exist.");
     return addPending(ctx, {
       kind: "memory_forget",
-      title: "Forget this",
+      title: tr(ctx.userId, "Forget this", "Das vergessen"),
       details: memory.text.slice(0, 120),
       payload: { id: memory.id },
     });
@@ -896,7 +900,7 @@ export async function executeAction(action, userId) {
   const payload = JSON.parse(action.payload);
   if (action.kind === "calendar_add") {
     const event = await createEvent(userId, payload);
-    return `Added “${event.title}” to your calendar.`;
+    return tr(userId, `Added “${event.title}” to your calendar.`, `„${event.title}“ wurde in deinen Kalender eingetragen.`);
   }
   if (action.kind === "task_create") {
     const task = createTask(userId, payload);
@@ -906,24 +910,25 @@ export async function executeAction(action, userId) {
     return `Aufgabe „${task.title}“ ist geplant. Nächster Lauf: ${when}. Du findest sie unter Geplante Aufgaben.`;
   }
   if (action.kind === "gmail_send") {
-    return gmailSend(userId, payload);
+    const sent = await gmailSend(userId, payload);
+    return sent === "Mail sent." ? tr(userId, sent, "E-Mail gesendet.") : sent;
   }
   if (action.kind === "mcp_call") {
     const result = await callTool(payload.serverId, payload.tool, payload.args);
     const text = String(result.text || "").trim();
     if (result.isError) return `That did not work in ${payload.serverName || "the connector"}. Try again or ask differently.`;
-    return text ? text.slice(0, 500) : "Done.";
+    return text ? text.slice(0, 500) : tr(userId, "Done.", "Erledigt.");
   }
   if (action.kind === "todoist_add") {
     return todoistAddTask(userId, payload);
   }
   if (action.kind === "memory_forget") {
     deleteMemory(userId, payload.id);
-    return "Forgotten.";
+    return tr(userId, "Forgotten.", "Vergessen.");
   }
   if (action.kind === "note_delete") {
     db.prepare("DELETE FROM notes WHERE id = ? AND user_id = ?").run(payload.id, userId);
-    return "Note deleted.";
+    return tr(userId, "Note deleted.", "Notiz gelöscht.");
   }
   throw new AppError(400, "Unknown action.");
 }

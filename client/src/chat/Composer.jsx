@@ -1,5 +1,5 @@
 import { t } from "../i18n/index.js";
-import { ArrowUp, Calendar as CalendarIcon, Camera, FileText, Image as ImageIcon, Mic, Paperclip, Plus, Square, X } from "lucide-react";
+import { ArrowUp, Camera, FileText, Image as ImageIcon, Mic, Paperclip, Plus, Square, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import HomeOrb from "../ui/HomeOrb.jsx";
 import { IconButton, Menu, MenuItem } from "../ui/ui.jsx";
@@ -113,19 +113,6 @@ export default function Composer({
         </ul>
       )}
 
-      {!voiceActive && calendarOn && useCalendar && (
-        <button
-          type="button"
-          onClick={onToggleCalendar}
-          aria-pressed="true"
-          aria-label={t("Calendar is shared with the assistant")}
-          className="caption mb-1 -ml-1 flex min-h-8 items-center gap-1.5 px-1 !text-accent hover:!text-fg focus-visible:outline-2 focus-visible:outline-accent"
-        >
-          <CalendarIcon size={12} strokeWidth={1.5} aria-hidden="true" />
-          {t("Calendar is shared with the assistant")}
-        </button>
-      )}
-
       {voiceActive ? (
         <RecordingBar
           levels={levels}
@@ -153,11 +140,6 @@ export default function Composer({
             <MenuItem icon={Camera} onSelect={() => onAttach("camera")}>{t("Take Photo")}</MenuItem>
             <MenuItem icon={ImageIcon} onSelect={() => onAttach("photos")}>{t("Photo Library")}</MenuItem>
             <MenuItem icon={Paperclip} onSelect={() => onAttach("files")}>{t("Choose Files")}</MenuItem>
-            {calendarOn && (
-              <MenuItem icon={CalendarIcon} checked={useCalendar} onSelect={onToggleCalendar}>
-                {t("Share my calendar with the assistant")}
-              </MenuItem>
-            )}
           </Menu>
 
           <div
