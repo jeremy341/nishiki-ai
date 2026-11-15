@@ -889,7 +889,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
   const sidebarHeader = <SidebarBrand name={assistantName} />;
 
   return (
-    <div className="flex h-dvh w-full overflow-hidden">
+    <div className="flex w-full overflow-hidden" style={{ height: "var(--app-h, 100dvh)" }}>
       <a href="#chat-main" onClick={() => document.getElementById("chat-main")?.focus()} className="sr-only z-[70] rounded-md bg-accent px-4 py-3 text-sm font-medium text-accent-fg focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:outline-2 focus:outline-offset-2 focus:outline-fg">{t("Skip to chat")}</a>
       {/* Wide screens: the chat list is always visible */}
       <aside className={`hidden min-w-0 w-72 shrink-0 flex-col overflow-hidden border-r border-border bg-surface px-3 pb-3 pt-5 ${!sidebarShown ? "" : viewing ? "xl:flex" : "md:flex"}`} aria-label={t("Chats")}>
