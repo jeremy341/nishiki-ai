@@ -2,7 +2,7 @@ import {
   CalendarClock, ChevronRight, FolderInput, FolderPlus, LayoutGrid, Library, MoreHorizontal, Pencil,
   Pin, PinOff, Plus, Search, SquarePen, Trash2,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api.js";
 import { currentLocale, t } from "../i18n/index.js";
 import { haptic } from "../feedback.js";
@@ -62,14 +62,43 @@ function SectionTitle({ children, action }) {
 
 function ChatRow({ chat, active, onSelect, onRename, onDelete, onTogglePin, onMove }) {
   const title = chat.title || t("New chat");
+  // Press and hold on a chat opens its menu (rename, pin, move, delete), like in the ChatGPT app. A right click does the same.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const hold = useRef({ timer: 0, x: 0, y: 0, fired: false });
+  const cancelHold = () => { clearTimeout(hold.current.timer); hold.current.timer = 0; };
+  const startHold = (e) => {
+    if (e.pointerType === "mouse") return;
+    cancelHold();
+    hold.current.fired = false;
+    hold.current.x = e.clientX;
+    hold.current.y = e.clientY;
+    hold.current.timer = setTimeout(() => {
+      hold.current.fired = true;
+      haptic("confirm");
+      setMenuOpen(true);
+    }, 450);
+  };
+  const moveHold = (e) => {
+    if (hold.current.timer && Math.hypot(e.clientX - hold.current.x, e.clientY - hold.current.y) > 8) cancelHold();
+  };
   return (
     <li className={`group relative flex items-center rounded-md transition-colors ${active ? "bg-raised" : "hover:bg-raised/50"}`}>
       {active && <span aria-hidden="true" className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-accent" />}
       <button
         type="button"
         aria-current={active ? "true" : undefined}
-        onClick={() => { haptic("tap"); onSelect(chat.id); }}
-        className={`h-11 min-w-0 flex-1 overflow-hidden whitespace-nowrap fade-end rounded-md px-3 text-left text-[15px] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent md:h-10 ${
+        onClick={() => {
+          if (hold.current.fired) { hold.current.fired = false; return; } // the long press already opened the menu
+          haptic("tap");
+          onSelect(chat.id);
+        }}
+        onPointerDown={startHold}
+        onPointerMove={moveHold}
+        onPointerUp={cancelHold}
+        onPointerCancel={cancelHold}
+        onPointerLeave={cancelHold}
+        onContextMenu={(e) => { e.preventDefault(); setMenuOpen(true); }}
+        className={`h-11 min-w-0 flex-1 select-none overflow-hidden whitespace-nowrap fade-end rounded-md px-3 text-left text-[15px] [-webkit-touch-callout:none] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent md:h-10 ${
           active ? "text-fg" : "text-fg-muted hover:text-fg"
         }`}
       >
@@ -77,6 +106,8 @@ function ChatRow({ chat, active, onSelect, onRename, onDelete, onTogglePin, onMo
         {title}
       </button>
       <Menu
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
         trigger={(
           <button
             type="button"
@@ -101,7 +132,7 @@ function ChatRow({ chat, active, onSelect, onRename, onDelete, onTogglePin, onMo
 
 function ChatList({ chats, ...rest }) {
   return (
-    <ul className="grid gap-0.5">
+    <ul className="grid grid-cols-[minmax(0,1fr)] gap-0.5">
       {chats.map((chat) => <ChatRow key={chat.id} chat={chat} active={chat.id === rest.activeId} {...rest} />)}
     </ul>
   );
@@ -295,7 +326,7 @@ export default function Sidebar({
         )}
         {found === null && (
           <>
-            <div className="grid gap-8 pb-6">{sections}</div>
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-8 pb-6">{sections}</div>
             {!conversations.length && <p className="caption px-3 py-2 normal-case">{t("Your chats will appear here.")}</p>}
           </>
         )}

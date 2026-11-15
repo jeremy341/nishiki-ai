@@ -902,7 +902,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
       <aside
         aria-label={`${assistantName} chats`}
         {...(chatsOpen ? {} : { inert: "" })}
-        className="fixed inset-y-0 left-0 z-0 flex w-[min(86vw,300px)] flex-col border-r border-border bg-surface pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] md:hidden"
+        className="fixed inset-y-0 left-0 z-0 flex w-[min(86vw,300px)] flex-col border-r border-border bg-surface pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] after:pointer-events-none after:absolute after:inset-x-0 after:top-full after:h-40 after:bg-surface after:content-[''] md:hidden"
       >
         <div className="flex items-center justify-between gap-2 px-3 pt-4">
           {sidebarHeader}

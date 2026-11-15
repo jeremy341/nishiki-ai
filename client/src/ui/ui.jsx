@@ -175,9 +175,9 @@ export function Sheet({ open, onOpenChange, title, description, children, footer
 }
 
 // A menu from a trigger button: the account menu and the per-chat menu. Hairline border, no shadow.
-export function Menu({ trigger, children, align = "end" }) {
+export function Menu({ trigger, children, align = "end", open, onOpenChange }) {
   return (
-    <DropdownPrimitive.Root>
+    <DropdownPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DropdownPrimitive.Trigger asChild>{trigger}</DropdownPrimitive.Trigger>
       <DropdownPrimitive.Portal>
         <DropdownPrimitive.Content
