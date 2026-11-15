@@ -478,3 +478,14 @@ html [data-sonner-toast][data-styled="true"] {
 html [data-sonner-toast] [data-description] { font-family: var(--font-sans); font-size: 13px; color: var(--fg-muted); }
 html [data-sonner-toast] [data-button] { background: var(--accent); color: var(--accent-fg); border-radius: 6px; font-family: var(--font-mono); font-size: 12px; font-weight: 500; }
 html [data-sonner-toast] [data-close-button] { background: var(--overlay); color: var(--fg-muted); border: 1px solid var(--border-strong); }
+
+/* The check mark of a finished action pops in. */
+@keyframes check-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.check-pop { animation: check-pop 360ms var(--ease-snappy, ease-out) both; }
+@media (prefers-reduced-motion: reduce) {
+  .check-pop { animation: none; }
+}

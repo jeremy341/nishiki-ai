@@ -8,8 +8,16 @@ export function aiConfigured() {
 }
 
 // Some reasoning models wrap their thinking in <think> tags. Never show or speak that part.
+// The assistant never uses emojis (the prompt says so, and this removes any that slip through). Plain symbols such as
+// arrows, check marks and the copyright sign stay: only real emoji (picture presentation) are taken out.
+const EMOJI = /\p{Emoji_Presentation}(?:\p{Emoji_Modifier}|️|‍\p{Extended_Pictographic}️?)*|\p{Extended_Pictographic}️(?:‍\p{Extended_Pictographic}️?)*/gu;
+export function stripEmoji(text) {
+  if (!text) return text;
+  return String(text).replace(EMOJI, "").replace(/[ 	]{2,}/g, " ").replace(/ +([.,!?;:])/g, "$1");
+}
+
 function cleanModelText(text) {
-  return text.replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/<\/?think>/gi, "").trim();
+  return stripEmoji(text.replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/<\/?think>/gi, "")).trim();
 }
 
 export function recordUsage(userId, role, provider, model, usage) {
@@ -181,9 +189,10 @@ async function streamChat(r, body, onText, onThinking) {
 
   let shown = false;
   const filter = thinkFilter((text) => {
-    if (!text) return;
+    const clean = stripEmoji(text);
+    if (!clean) return;
     shown = true;
-    onText(text);
+    onText(clean);
   });
   let content = "";
   let usage = null;

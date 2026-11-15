@@ -393,6 +393,7 @@ Object.assign(de, {
   "Checked your GitHub": "Dein GitHub geprüft",
   "Searched Notion": "Notion durchsucht",
   "Looked through earlier chats": "Frühere Chats durchsucht",
+  "Working…": "Wird ausgeführt…",
   "Sign in": "Anmelden",
   "Your private assistant": "Dein privater Assistent",
   "tap: cat's paw · hold or right-click: feed the koi": "tippen: Katzenpfote · lange drücken oder rechtsklicken: Koi füttern"

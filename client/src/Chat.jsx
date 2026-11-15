@@ -1,6 +1,6 @@
 import { t } from "./i18n/index.js";
 import {
-  Calendar as CalendarIcon, LogOut,
+  Calendar as CalendarIcon, LoaderCircle, LogOut,
   Download, Pencil, PanelLeft, Plus, Settings as SettingsIcon, SquarePen, Sun, Moon, Trash2, Volume2, X,
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
@@ -111,6 +111,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
   const [speaking, setSpeaking] = useState(false);
   const [speakReplies, setSpeakReplies] = useState(() => readPref("speakReplies", false));
   const [theme, setThemeState] = useState(() => effectiveTheme());
+  const [confirming, setConfirming] = useState(null); // the action being run right now
   const [useCalendar] = useState(true); // the calendar is shared whenever the Calendar app is on in Settings
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -684,16 +685,21 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
 
   // Confirmation cards: the assistant proposed something, the user taps to run or drop it.
   async function confirmAction(action) {
+    if (confirming) return;
     setError("");
+    setConfirming(action.id);
     try {
       const data = await api(`/api/actions/${action.id}/confirm`, { method: "POST", body: {} });
       setActions((list) => list.filter((a) => a.id !== action.id));
       setMessages((list) => [...list, data.message]);
       haptic("confirm");
+      dropSound("reply");
       toast.success(t("Done"));
     } catch (err) {
       if (err.status === 404 || err.status === 409) setActions((list) => list.filter((a) => a.id !== action.id));
       else setError(err.message);
+    } finally {
+      setConfirming(null);
     }
   }
 
@@ -1017,7 +1023,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
               {actions.length > 0 && (
                 <div className="grid gap-3" role="group" aria-label={t("Waiting for your confirmation")}>
                   {actions.map((a) => (
-                    <ActionCard key={a.id} action={a} onConfirm={() => confirmAction(a)} onCancel={() => cancelAction(a)} />
+                    <ActionCard key={a.id} action={a} busy={confirming === a.id} locked={Boolean(confirming)} onConfirm={() => confirmAction(a)} onCancel={() => cancelAction(a)} />
                   ))}
                 </div>
               )}
@@ -1212,15 +1218,17 @@ function ToggleIcon() {
 
 // A proposal that changes data (calendar event, note deletion). Runs only on Confirm. A hairline card, narrower than the
 // column: a mono caption, the text, a mono details line and the two buttons.
-function ActionCard({ action, onConfirm, onCancel }) {
+function ActionCard({ action, onConfirm, onCancel, busy = false, locked = false }) {
   return (
     <div className="motion-enter w-full max-w-[326px] rounded-lg border border-border bg-surface px-4 pb-4 pt-3.5 md:max-w-[28rem]">
       <div className="caption">{t(KIND_LABEL[action.kind] || "Confirmation")}</div>
       <p className="m-0 mt-1 text-[17px] leading-6">{action.title}</p>
       {action.details && <p className="m-0 mt-[3px] break-words font-mono text-[13px] leading-5 tracking-[0.02em] text-fg-muted">{action.details}</p>}
       <div className="mt-3.5 flex gap-2">
-        <Button variant="primary" onClick={onConfirm}>{t("Confirm")}</Button>
-        <Button variant="secondary" onClick={onCancel}>{t("Cancel")}</Button>
+        <Button variant="primary" onClick={onConfirm} disabled={locked} aria-busy={busy}>
+          {busy ? <><LoaderCircle size={16} strokeWidth={1.75} aria-hidden="true" className="animate-spin" /> {t("Working…")}</> : t("Confirm")}
+        </Button>
+        <Button variant="secondary" onClick={onCancel} disabled={locked}>{t("Cancel")}</Button>
       </div>
     </div>
   );

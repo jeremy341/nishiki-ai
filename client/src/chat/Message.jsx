@@ -53,6 +53,23 @@ export function ThoughtBlock({ text, live = false }) {
   );
 }
 
+// Shown after the person confirmed something (a calendar event, a reminder, a sent mail): a check mark, what was done,
+// and the details. The result of the action, not a chat answer.
+function DoneCard({ widget }) {
+  return (
+    <div role="status" className="motion-enter flex w-full max-w-[326px] items-start gap-3 rounded-lg border border-accent/40 bg-surface px-4 py-3.5 md:max-w-[28rem]">
+      <span className="check-pop mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-accent text-accent-fg">
+        <Check size={14} strokeWidth={2.25} aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <div className="caption">{t("Done")}</div>
+        <p className="m-0 mt-0.5 break-words text-[16px] leading-6">{widget.text}</p>
+        {widget.details && <p className="m-0 mt-[3px] break-words font-mono text-[13px] leading-5 tracking-[0.02em] text-fg-muted">{widget.details}</p>}
+      </div>
+    </div>
+  );
+}
+
 // Your messages sit in a quiet grey block on the right. Answers have no bubble, no avatar
 // and no decoration: text, then any chart or table, sources and a copy action.
 function FileChip({ file, onOpen }) {
@@ -147,7 +164,8 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
   }
 
   const sources = message.sources || [];
-  const widgets = message.widgets || [];
+  const done = (message.widgets || []).find((w) => w.kind === "done");
+  const widgets = (message.widgets || []).filter((w) => w.kind !== "done");
 
   async function copy() {
     try {
@@ -172,7 +190,7 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
         </p>
       )}
       {message.thinking && <ThoughtBlock text={message.thinking} live={message.id === "streaming" && !message.content} />}
-      {message.content && <div className="mt-2 max-w-[34ch] md:max-w-[68ch]"><Answer text={message.content} /></div>}
+      {done ? <DoneCard widget={done} /> : message.content && <div className="mt-2 max-w-[34ch] md:max-w-[68ch]"><Answer text={message.content} /></div>}
       {attachments.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {attachments.map((a) => (isImage(a) ? (
@@ -209,7 +227,7 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
           </ul>
         </Fold>
       )}
-      {(message.content || canRegenerate) && saved && (
+      {!done && (message.content || canRegenerate) && saved && (
         <div className="-ml-[13px] mt-0.5 flex items-center opacity-100 transition-opacity duration-150 md:-ml-[9px] md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">
           {message.content && (
             <IconButton label={copied ? t("Copied") : t("Copy answer")} onClick={copy} className="size-11 !text-fg-subtle hover:!text-fg md:size-9">

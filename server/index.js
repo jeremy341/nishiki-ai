@@ -646,7 +646,10 @@ app.post("/api/actions/:id/confirm", requireUser, async (req, res) => {
     "INSERT INTO messages (user_id, conversation_id, role, content) VALUES (?, ?, 'assistant', ?)",
   ).run(req.user.id, action.conversation_id, text);
   db.prepare("UPDATE conversations SET updated_at = datetime('now') WHERE id = ?").run(action.conversation_id);
-  const row = db.prepare("SELECT id, role, content, created_at FROM messages WHERE id = ?")
+  // The result is shown as a "done" card (a check mark, the sentence and the details), not as plain text.
+  const done = [{ kind: "done", caption: action.kind, text, details: action.details || "" }];
+  db.prepare("UPDATE messages SET widgets = ? WHERE id = ?").run(JSON.stringify(done), Number(lastInsertRowid));
+  const row = db.prepare("SELECT id, role, content, created_at, widgets FROM messages WHERE id = ?")
     .get(Number(lastInsertRowid));
   res.json({ message: messageRow(row, []) });
 });
