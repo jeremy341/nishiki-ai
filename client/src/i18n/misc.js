@@ -43,6 +43,8 @@ const de = {
   "Add a photo or file": "Foto oder Datei hinzufügen",
   "Conversation mode": "Gesprächsmodus",
   "Sources": "Quellen",
+  "The daily limit for voice conversations is reached. Typing in the chat still works, and voice is available again later.": "Das Tageslimit für Sprachgespräche ist erreicht. Schreiben im Chat geht weiter, Sprache ist später wieder verfügbar.",
+  "Thoughts": "Gedanken",
   "Assistant": "Assistent",
   "Copied": "Kopiert",
   "Could not copy. Select the text and copy it instead.": "Konnte nicht kopieren. Markiere den Text und kopiere ihn stattdessen.",

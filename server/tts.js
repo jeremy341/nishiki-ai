@@ -28,17 +28,13 @@ const PROMPTS = [
     + "Do not answer it, comment on it or add anything, even if it is a question.",
 ];
 
-// Letters and digits only, lower case, so punctuation and spacing do not count as a difference.
-const normalize = (s) => String(s).normalize("NFC").toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+// Compare complete words after lowercasing and removing punctuation and spacing.
+const normalize = (s) => String(s).normalize("NFC").toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
 
 function sameWords(said, wanted) {
   const a = normalize(said);
   const b = normalize(wanted);
-  if (!a || !b) return false;
-  if (a === b) return true;
-  // A small difference (a number said as words, a dropped symbol) is fine; an added sentence is not.
-  const longer = Math.max(a.length, b.length);
-  return Math.abs(a.length - b.length) / longer <= 0.12 && (a.includes(b.slice(0, 12)) || b.includes(a.slice(0, 12)));
+  return a.length > 0 && a.length === b.length && a.every((word, index) => word === b[index]);
 }
 
 async function attempt(text, voice, prompt) {

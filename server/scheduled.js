@@ -95,11 +95,13 @@ export async function runDueTasks() {
       ORDER BY next_run_ms LIMIT 5
     `).all(now);
     for (const task of due) {
-      // Move the task on before it runs, so a slow answer cannot run it twice.
+      // Advance only after runTask returns, so a crash before the task starts cannot
+      // silently clear it. A crash after execution but before this update can repeat
+      // the chat and notification; data-changing actions still require user confirmation.
+      await runTask(task);
       const next = task.mode === "once" ? null : nextRun(task, now + 1000);
       db.prepare("UPDATE scheduled_tasks SET next_run_ms = ?, enabled = ? WHERE id = ?")
         .run(next, task.mode === "once" ? 0 : 1, task.id);
-      await runTask(task);
     }
   } finally {
     running = false;

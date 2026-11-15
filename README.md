@@ -1,25 +1,30 @@
-# Friend AI
+# Nishiki
 
-The look of the app (the koi pond, paper and ink, vermilion) is defined in [DESIGN.md](DESIGN.md).
+A private, invite-only AI assistant for you and up to four friends. It runs on your own server, talks German by default (English too), works best on a phone, and is built on [Hack Club AI](https://ai.hackclub.com). The look (paper and ink, a koi pond, a vermilion accent) is defined in [DESIGN.md](DESIGN.md).
 
-A small, login-protected personal assistant web app. You create a login for your friend, he signs in on his phone, connects his own Google Calendar, and talks to an AI by typing or speaking. The AI can read it back out loud, and an animated thinking orb shows what it is doing.
+<p align="center">
+  <img src="docs/screenshots/start-desktop.png" alt="Start screen on a computer, light mode" width="62%">
+  <img src="docs/screenshots/start-phone.png" alt="Start screen on a phone, light mode" width="22%">
+</p>
+<p align="center"><sub>The start screen: koi swim over the name. "Anmelden" opens the sign-in.</sub></p>
 
-- **Login:** invite-only, up to five people. The admin sends an invite link; the person chooses their username and password. Passwords are stored as scrypt hashes.
-- **AI:** Claude Haiku 5.5 through [Hack Club AI](https://ai.hackclub.com) (OpenAI-compatible API). The key stays on the server. Chat uses Haiku 5.5, voice conversations use `openai/gpt-6-luna` (same price, set under Admin, AI models), speech to text `mistralai/voxtral-small-24b-2507`, and spoken replies `openai/gpt-audio-mini`. Hack Club's `/models` list (510 models, no key needed) has no plain text-to-speech model, no ElevenLabs and no realtime model; the audio-output chat models are the only speech models there. The Replicate proxy (`/proxy/v1/replicate`, in beta) also allows MiniMax Speech 2.8 Turbo and 02 Turbo, Qwen3-TTS, Chatterbox Pro, Dia and a fast Whisper; ElevenLabs is not on its allow list. MiniMax gave German speech in about 1.9 s per sentence plus download, slower than `gpt-audio-mini` (about 1.4 s) and, at Replicate's public price per character, about ten times as expensive, so it is not used. The browser's own voice is never used.
-- **Google Calendar:** each user connects his own account with OAuth. The app asks only for `calendar.events`, never sees a Google password, and writes nothing without a confirmation click.
-- **Chats:** many persistent conversations per user, with rename and delete. Each chat keeps its own history.
-- **Photos and PDFs:** attach up to 4 files per message (JPEG, PNG, WebP, GIF, or PDF, 6 MB max each). Photos are resized in the browser before upload. Claude Haiku 5.5 reads them directly.
-- **Conversation mode:** the Talk button opens a full-screen voice loop: it listens, sends, waits for the reply, speaks it, then listens again. Tap the orb to pause, or to interrupt a reply.
-- **Light and dark mode:** follows the phone or computer setting, with a toggle in the top bar.
-- **Voice in:** speech-to-text uses a dedicated audio model on Hack Club AI (`mistralai/voxtral-small-24b-2507`). The browser records, converts the audio to WAV, and sends it to the server.
-- **Voice out:** read-aloud uses an audio model on Hack Club AI (`openai/gpt-audio-mini`), with the browser voice as fallback.
-- **Orb:** [`@yogesharc/thinking-orbs`](https://www.npmjs.com/package/@yogesharc/thinking-orbs) (MIT). States: idle, listening, thinking, speaking, error.
+<p align="center">
+  <img src="docs/screenshots/home-desktop.png" alt="Home screen on a computer, light mode" width="62%">
+  <img src="docs/screenshots/home-phone.png" alt="Home screen on a phone, light mode" width="22%">
+</p>
+<p align="center"><sub>The home screen after signing in: tap the orb to talk, or type in the message box. Demo account with sample data, paper (light) theme.</sub></p>
 
-## Screenshot
+## What it does
 
-The home screen with the koi pond look. Demo account, sample data.
-
-![Home screen, koi pond look](docs/screenshots/01-home.png)
+- **Chat** with persistent conversations, projects, a library, scheduled tasks and apps. Every screen has its own address (`/chat/12`, `/settings`, `/library`, `/tasks`, `/calendar`), so back, forward and links work.
+- **Two models, so it stays cheap.** Most messages go to a fast, cheap model (DeepSeek V4.1 Flash, thinking at medium effort). Messages that look like real work (calculations, analysis, code, long texts) go to a stronger model (Claude Haiku 5.5) with more thinking. Background jobs such as memory notes and summaries use the cheap model.
+- **Sources and thinking are folded away.** Under an answer, "Quellen" and "Gedanken" open on tap, so answers stay clean.
+- **Voice conversation** with an orb that follows your voice. Replies are spoken by the server voice, never by the browser's voice. Each person has a daily voice limit (`VOICE_DAILY_TURNS`, default 80) to keep the cost in check.
+- **Tools:** web search, reading web pages, charts and tables, reminders, notes, Google Calendar and Gmail (each person connects their own account), PDFs and slides. Anything that changes data waits for a tap on **Confirm**.
+- **Photos and PDFs:** up to 4 files per message.
+- **Light (paper) and dark (pond) themes**, paper by default. Quiet water-drop sounds and light haptics can be switched off.
+- **Installable** on iPhone, iPad and computers as a web app, no App Store.
+- **Invite-only:** up to five people, single-use invite links that expire after 7 days, sessions that last 90 days, scrypt-hashed passwords. The Hack Club key stays on the server, encrypted.
 
 ## Run it on your computer first
 
@@ -68,7 +73,7 @@ The starting models come from `HACKCLUB_MODEL`, `STT_MODEL` and `TTS_MODEL` in `
 
 The API is OpenAI-compatible: `POST https://ai.hackclub.com/proxy/v1/chat/completions` with `Authorization: Bearer <key>`. The app strips `<think>…</think>` blocks from replies so they are never shown or spoken.
 
-**Input types:** Claude Haiku 5.5 accepts text, images and files (PDF) on Hack Club. It does **not** accept video, and video uploads are refused for now.
+**Input types:** the chat models accept text, images and files (PDF) on Hack Club. Video is not accepted, and video uploads are refused for now.
 
 ## What the assistant can do
 
@@ -98,7 +103,7 @@ The assistant calls tools when they help. Read-only tools run at once. Anything 
 
 The user never sees tool calls. Under each answer a short line says what was used (for example "Searched your Gmail"). Tool results stay out of the chat.
 
-Limits per reply (the chat model is `anthropic/claude-haiku-5.5` by default; a large model such as GPT-6.1 Sol costs many times more per chat): up to 6 tool steps, 8 KB of tool output per step, about 60,000 model tokens in total (`AI_MAX_TURN_TOKENS`). Per request: 60,000 characters of chat history (`HISTORY_CHARS`) and 8 MB of photos and PDFs (`ATTACHMENT_BYTES_PER_REQUEST`). The thinking setting adds room to the answer length, so a long answer is not cut off. Nothing is limited per day per person. Text from web pages and connectors is treated as information, not instructions.
+Limits per reply (the chat model is `~deepseek/deepseek-flash-latest` (DeepSeek V4.1 Flash), which also does the background jobs such as memory notes and chat summaries): up to 6 tool steps, 5 KB of tool output per step, about 40,000 model tokens in total (`AI_MAX_TURN_TOKENS`). Per request: 20,000 characters of chat history (`HISTORY_CHARS`) and 8 MB of photos and PDFs (`ATTACHMENT_BYTES_PER_REQUEST`). The thinking setting adds room to the answer length, so a long answer is not cut off. Nothing is limited per day per person. Text from web pages and connectors is treated as information, not instructions.
 
 Confirmations happen in the chat. In conversation mode the orb covers the chat, so close it to tap Confirm.
 
@@ -347,7 +352,7 @@ The koi pond on the first screen is ASCII Koi by pursurer (MIT License), vendore
 
 ## Known limits (v1)
 
-- The orb follows real audio in conversation mode: your microphone while listening and the reply's loudness while speaking. The reply loudness can only be measured for the server voice; with the browser voice the orb uses a gentle animation instead.
+- The orb follows real audio in conversation mode: your microphone while listening and the reply's loudness while speaking.
 - Video is not supported by Claude Haiku 5.5 on Hack Club, so video uploads are refused.
 - No long-term memory across chats. Each chat is stored in full. When a chat grows beyond `HISTORY_CHARS` (about 240,000 characters by default), its oldest messages are folded into a running summary that the AI keeps as its memory of that chat. The newest messages are always sent word for word. Deleting a chat removes it, summary included.
 - The interface is English. The assistant replies in the language the user writes in.

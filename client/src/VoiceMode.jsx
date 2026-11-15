@@ -124,7 +124,7 @@ export default function VoiceMode({ onClose, turn }) {
         restartSoon(); // nothing was understood
         return;
       }
-      setError(err.message);
+      setError(t(err.message));
       setPhaseBoth("error");
     }
   }

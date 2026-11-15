@@ -27,15 +27,18 @@ export const config = {
     // Hack Club AI is OpenAI-compatible. Key stays on the server only.
     apiKey: env("HACKCLUB_API_KEY"),
     baseUrl: env("HACKCLUB_BASE_URL", "https://ai.hackclub.com/proxy/v1").replace(/\/$/, ""),
-    // Claude Haiku 5.5 via Hack Club AI. Confirm ids with GET /proxy/v1/models.
-    model: env("HACKCLUB_MODEL", "anthropic/claude-haiku-5.5"),
-    maxTokens: Number(env("AI_MAX_TOKENS", "1500")),
+    // DeepSeek V4.1 Flash via Hack Club AI (the cheapest model that passed the German tool-calling tests). Confirm ids with GET /proxy/v1/models.
+    model: env("HACKCLUB_MODEL", "~deepseek/deepseek-flash-latest"),
+    maxTokens: Number(env("AI_MAX_TOKENS", "3000")),
+    // Harder questions (see route.js) go to this stronger model with thinking on. Empty = never.
+    deepModel: env("DEEP_MODEL", "anthropic/claude-haiku-5.5"),
+    deepMaxTokens: Number(env("DEEP_MAX_TOKENS", "4000")),
     voiceModel: env("VOICE_MODEL", "google/gemini-3.1-flash-lite"), // answers in voice mode: fast (about 1.7 s per answer with tools) and the best of the fast ones in tests
     // How much of a chat is sent to the model per reply (characters, roughly 4 per token).
     // Older parts beyond this are summarized, not dropped.
-    historyChars: Number(env("HISTORY_CHARS", "60000")), // chat history sent per request, in characters
-    maxTurnTokens: Number(env("AI_MAX_TURN_TOKENS", "60000")), // all model tokens one reply may use, across its tool steps
-    toolOutputChars: Number(env("TOOL_OUTPUT_CHARS", "8000")), // tool result sent back to the model, per tool call
+    historyChars: Number(env("HISTORY_CHARS", "20000")), // chat history sent per request, in characters
+    maxTurnTokens: Number(env("AI_MAX_TURN_TOKENS", "40000")), // all model tokens one reply may use, across its tool steps
+    toolOutputChars: Number(env("TOOL_OUTPUT_CHARS", "5000")), // tool result sent back to the model, per tool call
     attachmentBytesPerRequest: Number(env("ATTACHMENT_BYTES_PER_REQUEST", String(8 * 1024 * 1024))), // photos and PDFs sent as data per request
   },
 
@@ -51,6 +54,8 @@ export const config = {
     // Longest spoken answer, in model tokens (spoken audio is about 20 tokens per second, so 900 is about 45 seconds).
     // The prompt keeps answers short on its own; this only stops a runaway answer, and cuts nothing off in normal use.
     maxTokens: Number(env("VOICE_MAX_TOKENS", "900")),
+    // Spoken audio is the most expensive part of a chat, so each person gets this many voice turns per day (0 = no limit).
+    dailyTurns: Number(env("VOICE_DAILY_TURNS", "80")),
   },
   tts: {
     enabled: env("TTS_ENABLED", "1") !== "0",

@@ -1,5 +1,5 @@
 import { currentLocale, t } from "../i18n/index.js";
-import { Check, Copy, FileText, Pencil, RotateCw, StickyNote } from "lucide-react";
+import { Check, ChevronRight, Copy, FileText, Pencil, RotateCw, StickyNote } from "lucide-react";
 import { lazy, Suspense, useState } from "react";
 import { toast } from "sonner";
 import Answer from "../ui/Answer.jsx";
@@ -23,6 +23,35 @@ const domainOf = (url) => {
     return url;
   }
 };
+
+// A folded section under an answer: a small caption row that opens on tap.
+function Fold({ label, children, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="mt-3 max-w-[34ch] md:max-w-[68ch]">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="caption pressable -ml-1 inline-flex min-h-8 items-center gap-1.5 rounded px-1 text-fg-subtle hover:text-fg"
+      >
+        <ChevronRight size={14} strokeWidth={1.5} aria-hidden="true" className={`transition-transform duration-150 ${open ? "rotate-90" : ""}`} />
+        {label}
+      </button>
+      {open && <div className="motion-enter mt-1">{children}</div>}
+    </div>
+  );
+}
+
+// What the model thought before it answered. Folded away; the text is exactly what the model wrote.
+export function ThoughtBlock({ text, live = false }) {
+  if (!text) return null;
+  return (
+    <Fold label={live ? t("Thinking…") : t("Thoughts")}>
+      <p className="whitespace-pre-wrap break-words border-l border-border-strong pl-3 text-[14px] leading-6 text-fg-muted">{text.trim()}</p>
+    </Fold>
+  );
+}
 
 // Your messages sit in a quiet grey block on the right. Answers have no bubble, no avatar
 // and no decoration: text, then any chart or table, sources and a copy action.
@@ -142,7 +171,8 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
           ))}
         </p>
       )}
-      {message.content && <div className="max-w-[34ch] md:max-w-[68ch]"><Answer text={message.content} /></div>}
+      {message.thinking && <ThoughtBlock text={message.thinking} live={message.id === "streaming" && !message.content} />}
+      {message.content && <div className="mt-2 max-w-[34ch] md:max-w-[68ch]"><Answer text={message.content} /></div>}
       {attachments.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {attachments.map((a) => (isImage(a) ? (
@@ -161,20 +191,23 @@ export default function Message({ message, onOpenFile, onEdit, onRegenerate, onS
         </Suspense>
       )}
       {sources.length > 0 && (
-        <div className="mt-3 flex max-w-[34ch] flex-wrap items-center gap-x-3 gap-y-1 text-[13px] leading-5 text-fg-subtle md:max-w-[68ch]">
-          <span className="caption">{t("Sources")}</span>
-          {sources.map((s) => (
-            <a
-              key={s.url}
-              href={s.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="max-w-[16rem] truncate text-fg-muted underline decoration-border-strong underline-offset-4 transition-colors duration-150 hover:text-fg hover:decoration-accent"
-            >
-              {s.title || domainOf(s.url)}
-            </a>
-          ))}
-        </div>
+        <Fold label={`${t("Sources")} (${sources.length})`}>
+          <ul className="grid gap-1 text-[14px] leading-6">
+            {sources.map((s) => (
+              <li key={s.url} className="min-w-0">
+                <a
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block truncate text-fg-muted underline decoration-border-strong underline-offset-4 transition-colors duration-150 hover:text-fg hover:decoration-accent"
+                >
+                  {s.title || domainOf(s.url)}
+                </a>
+                <span className="caption block truncate normal-case">{domainOf(s.url)}</span>
+              </li>
+            ))}
+          </ul>
+        </Fold>
       )}
       {(message.content || canRegenerate) && saved && (
         <div className="-ml-[13px] mt-0.5 flex items-center opacity-100 transition-opacity duration-150 md:-ml-[9px] md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100">

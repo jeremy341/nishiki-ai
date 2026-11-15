@@ -29,6 +29,12 @@ const NO_SPEECH_TEXT = "(Sprachnachricht)";
 const HISTORY_MESSAGES = 4; // the audio model charges six times what a text model does for what it reads
 const HISTORY_CHARS = 300;
 
+function interruptedVoiceError() {
+  const error = new AppError(502, "The voice response was interrupted. Please try again.");
+  error.voiceInterrupted = true;
+  return error;
+}
+
 const ASK_ASSISTANT = {
   type: "function",
   function: {
@@ -157,8 +163,10 @@ async function liveCall({ userId, conversationId, wav, voice, emit }) {
   let usage = null;
   let audioChars = 0;
   const call = { name: "", args: "" };
+  const tStart = Date.now();
   const sendAudio = (data) => {
     if (!data) return;
+    if (!audioChars) debug("first audio after", Date.now() - tStart, "ms");
     audioChars += data.length;
     emit({ type: "audio", data });
   };
@@ -193,8 +201,12 @@ async function liveCall({ userId, conversationId, wav, voice, emit }) {
       }
     }
   } catch (error) {
-    // After sound has started, what was said stays said; before that, the caller tries the slow way.
-    if (!audioChars) throw error instanceof AppError ? error : new AppError(502, "The voice service stopped answering.");
+    // Do not persist or replay an incomplete answer once any reply text or audio was exposed.
+    if (audioChars || transcript) {
+      recordUsage(userId, "tts", "hackclub", r.model, usage);
+      throw interruptedVoiceError();
+    }
+    throw error instanceof AppError ? error : new AppError(502, "The voice service stopped answering.");
   }
   sendAudio(aligner.flush());
   recordUsage(userId, "tts", "hackclub", r.model, usage);
@@ -208,7 +220,10 @@ async function liveCall({ userId, conversationId, wav, voice, emit }) {
     }
     return { handoff: true, request, transcript, spoke: audioChars > 0 };
   }
-  if (!audioChars) throw new AppError(502, "The voice service returned no audio.");
+  if (!audioChars) {
+    if (transcript) throw interruptedVoiceError();
+    throw new AppError(502, "The voice service returned no audio.");
+  }
   return { handoff: false, request: "", transcript, spoke: true };
 }
 
@@ -222,14 +237,21 @@ async function laneCall({ userId, conversationId, wav, voice, emit }) {
     { role: "user", content: [{ type: "input_audio", input_audio: { data: wav, format: "wav" } }] },
   ];
   let streamed = false;
-  const message = await callModel(messages, {
-    role: "stt", userId, tools: [ASK_ASSISTANT], maxTokens: config.voice.maxTokens, temperature: 0.6,
-    onText: (text) => {
-      streamed = true;
-      speaker.feed(text);
-      emit({ type: "reply", text });
-    },
-  });
+  let message;
+  try {
+    message = await callModel(messages, {
+      role: "stt", userId, tools: [ASK_ASSISTANT], maxTokens: config.voice.maxTokens, temperature: 0.6,
+      onText: (text) => {
+        streamed = true;
+        speaker.feed(text);
+        emit({ type: "reply", text });
+      },
+    });
+  } catch (error) {
+    const spoken = await speaker.stop();
+    if (spoken || streamed) throw interruptedVoiceError();
+    throw error;
+  }
   const call = (message.tool_calls || []).find((c) => c.function?.name === "ask_assistant");
   if (call) {
     let request = "";
@@ -272,6 +294,7 @@ function createSpeaker({ userId, voice, emit }) {
   let pending = "";
   let count = 0;
   let spoken = 0;
+  let stopped = false;
   let chain = Promise.resolve();
 
   function addPiece(piece) {
@@ -281,7 +304,7 @@ function createSpeaker({ userId, voice, emit }) {
     const made = synthesizePcm(text, voice, userId).catch(() => null);
     chain = chain.then(async () => {
       const pcm = await made;
-      if (!pcm) return;
+      if (!pcm || stopped) return;
       spoken += 1;
       emitPcm(emit, pcm);
     });
@@ -314,6 +337,10 @@ function createSpeaker({ userId, voice, emit }) {
     async finish() {
       cut(true);
       await chain;
+      return spoken;
+    },
+    async stop() {
+      stopped = true;
       return spoken;
     },
   };
@@ -410,8 +437,10 @@ function saveExchange({ userId, conversationId, userText, replyText }) {
 // One turn: the recording in, speech and the saved messages out.
 export async function runVoiceTurn({ userId, conversationId, wav, emit }) {
   const voice = getPrefs(userId).voice;
+  const t0 = Date.now();
   // Written down in parallel, only for the chat history.
   const heard = transcribe(wav, userId).catch(() => "").then((text) => {
+    debug("heard after", Date.now() - t0, "ms");
     if (text) emit({ type: "heard", text });
     return text;
   });
@@ -427,10 +456,12 @@ export async function runVoiceTurn({ userId, conversationId, wav, emit }) {
         ? await liveCall({ userId, conversationId, wav, voice, emit })
         : await laneCall({ userId, conversationId, wav, voice, emit });
     } catch (error) {
+      if (error.voiceInterrupted) throw error;
       console.warn(`Voice engine "${engine}" failed:`, error.message);
     }
   }
 
+  debug("engine done after", Date.now() - t0, "ms, handoff:", Boolean(live?.handoff));
   if (live && !live.handoff) {
     const userText = (await heard) || NO_SPEECH_TEXT;
     return { ...saveExchange({ userId, conversationId, userText, replyText: live.transcript }), userText };

@@ -74,16 +74,24 @@ export async function callModel(messages, {
   tools,
   budget, // { used } for one reply: tokens used so far, across its tool steps
   onText, // called with each piece of answer text as it arrives (switches to streaming)
+  deep = false, // use the stronger model with thinking on (see route.js)
+  onThinking, // called with each piece of the model's thinking as it arrives
 } = {}) {
-  const r = resolveRole(role);
-  const body = { model: r.model, messages: withPromptCache(r.model, messages), max_tokens: maxTokens, temperature };
+  const r = { ...resolveRole(role) };
+  if (deep && config.ai.deepModel) r.model = config.ai.deepModel;
+  else deep = false;
+  const body = { model: r.model, messages: withPromptCache(r.model, messages), max_tokens: deep ? Math.max(maxTokens, config.ai.deepMaxTokens) : maxTokens, temperature };
+  // Thinking is shown folded under the answer. The cheap model thinks at medium effort: without it, it sometimes answered
+  // "I can look that up if you like" instead of using a tool. The stronger model thinks more.
+  if (deep) body.reasoning = { effort: "medium" };
+  else if (/deepseek/.test(r.model)) body.reasoning = { effort: "medium" };
   if (tools?.length) {
     body.tools = tools;
     body.tool_choice = "auto";
   }
   if (onText) {
     try {
-      const streamed = await streamChat(r, body, onText);
+      const streamed = await streamChat(r, body, onText, onThinking);
       recordUsage(userId, role, r.providerId, r.model, streamed.usage);
       if (budget && streamed.usage) budget.used += Number(streamed.usage.total_tokens) || 0;
       return streamed.message;
@@ -99,6 +107,8 @@ export async function callModel(messages, {
   recordUsage(userId, role, r.providerId, r.model, data.usage);
   if (budget && data.usage) budget.used += Number(data.usage.total_tokens) || 0;
   if (typeof message.content === "string") message.content = cleanModelText(message.content);
+  const thoughtText = message.reasoning || message.reasoning_content;
+  if (onThinking && typeof thoughtText === "string" && thoughtText) onThinking(thoughtText);
   if (!message.content && !message.tool_calls?.length) {
     // Helps to find out why a model said nothing: how it ended and what it spent.
     console.warn("Empty answer from", r.model, "finish:", data.choices?.[0]?.finish_reason, "native:", data.choices?.[0]?.native_finish_reason, "usage:", JSON.stringify(data.usage || {}).slice(0, 200));
@@ -150,7 +160,7 @@ function thinkFilter(emit) {
 
 // One streamed model call. Text goes to onText as it arrives; the result has the same shape as the
 // normal call: { message: { role, content, tool_calls? }, usage }.
-async function streamChat(r, body, onText) {
+async function streamChat(r, body, onText, onThinking) {
   let response;
   try {
     response = await fetch(`${r.baseUrl}/chat/completions`, {
@@ -198,6 +208,8 @@ async function streamChat(r, body, onText) {
         if (data.usage) usage = data.usage;
         const delta = data.choices?.[0]?.delta;
         if (!delta) continue;
+        const thought = typeof delta.reasoning === "string" ? delta.reasoning : typeof delta.reasoning_content === "string" ? delta.reasoning_content : "";
+        if (thought) onThinking?.(thought);
         if (typeof delta.content === "string" && delta.content) {
           content += delta.content;
           filter.push(delta.content);

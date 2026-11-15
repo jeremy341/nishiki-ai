@@ -19,6 +19,19 @@ const CLAIM = [
 ];
 const claimsAnAction = (text) => CLAIM.some((pattern) => pattern.test(text));
 
+// Every step of a reply sends the whole conversation again. Tool results from earlier steps (a web page, a list of search
+// hits) were already used to decide the next step, so they are shortened; only the newest results stay in full.
+const OLD_RESULT_CHARS = 1500;
+function shortenOldToolResults(working) {
+  let lastAssistant = -1;
+  working.forEach((m, i) => { if (m.role === "assistant" && m.tool_calls?.length) lastAssistant = i; });
+  working.forEach((m, i) => {
+    if (m.role === "tool" && i < lastAssistant && typeof m.content === "string" && m.content.length > OLD_RESULT_CHARS) {
+      m.content = `${m.content.slice(0, OLD_RESULT_CHARS)} …[shortened]`;
+    }
+  });
+}
+
 // Lets the model call tools until it has an answer. Tool results go back to the model;
 // the final text is what the user sees.
 export async function runAgent(messages, ctx) {
@@ -31,11 +44,12 @@ export async function runAgent(messages, ctx) {
   const canAct = tools.some((tool) => ACTION_TOOLS.includes(tool.function.name));
 
   for (let step = 0; step < MAX_STEPS; step += 1) {
-    if (budget.used > config.ai.maxTurnTokens) {
+    if (budget.used >= config.ai.maxTurnTokens) {
       throw new AppError(502, "That answer needed too much work. Ask for a smaller part.");
     }
+    shortenOldToolResults(working);
     const message = await callModel(working, { role: ctx.voice && roleConfigured("voice") ? "voice" : "chat", userId: ctx.userId, tools: tools.length ? tools : undefined, budget,
-      onText: ctx.onText,
+      onText: ctx.onText, deep: Boolean(ctx.deep) && !ctx.voice, onThinking: ctx.onThinking,
       // Spoken answers are short because the prompt says so; the limit must still leave room for a tool call's arguments.
       ...(ctx.voice ? { maxTokens: Math.max(1200, config.voice.maxTokens) } : {}) });
     const calls = message.tool_calls || [];

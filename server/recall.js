@@ -51,7 +51,7 @@ async function learn(userId, conversationId) {
         + "in the user's language, or [].",
     },
     { role: "user", content: `Already known:\n${known.join("\n") || "-"}\n\nChat:\n${transcript}` },
-  ], { role: "chat", userId, maxTokens: 200, temperature: 0.2 });
+  ], { userId, maxTokens: 200, temperature: 0.2 });
 
   const seen = new Set(known.map((t) => t.toLowerCase()));
   for (const fact of parseFacts(reply.content).slice(0, 3)) {

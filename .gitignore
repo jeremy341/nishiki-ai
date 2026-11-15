@@ -13,3 +13,5 @@ data-demo/
 
 # Server logs
 *.log
+
+server-real.err

@@ -9,8 +9,9 @@ function promptFor(userId) {
   const prefs = getPrefs(userId);
   const language = prefs.language === "en" ? "English" : prefs.language === "de" ? "German" : prefs.uiLanguage === "en" ? "English" : "German";
   const other = language === "German" ? "English" : "German";
-  return `Transcribe this audio word for word. The speaker most likely speaks ${language}; if they speak ${other} or another language, write that language. `
-    + "Never translate. Keep the original words, spelling and umlauts. Output only the transcript, with no commentary. If there is no speech, output nothing.";
+  return `Transcribe this audio word for word. The speaker speaks ${language}. Write every ${language} word in ${language}, with correct spelling, umlauts and punctuation. `
+    + `Only a sentence that is clearly spoken in ${other} or another language is written in that language; a single ${other} word inside a ${language} sentence stays as said. `
+    + "Never translate and never answer. Output only the transcript, with no commentary. If there is no speech, output nothing.";
 }
 
 // Speech-to-text through the provider set for the "stt" job. Input is 16 kHz mono WAV.

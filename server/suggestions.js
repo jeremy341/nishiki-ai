@@ -19,13 +19,22 @@ export const STARTERS = [
 const TTL_MS = 30 * 60 * 1000;
 const SOURCES = ["calendar", "memory", "chat", "general"];
 const cache = new Map();
+const inFlight = new Map();
 
-async function contextLines(userId) {
-  const lines = [];
+function sourceState(userId) {
   const features = getFeatures(userId);
   const prefs = getPrefs(userId);
+  return {
+    calendar: Boolean(features.calendar && appOn(userId, "calendar") && googleStatus(userId).connected),
+    memory: Boolean(features.memory && prefs.memory),
+    uiLanguage: prefs.uiLanguage,
+  };
+}
 
-  if (features.calendar && appOn(userId, "calendar") && googleStatus(userId).connected) {
+async function contextLines(userId, sources) {
+  const lines = [];
+
+  if (sources.calendar) {
     try {
       const events = await listUpcomingEvents(userId, 2);
       for (const event of events.slice(0, 5)) {
@@ -35,7 +44,7 @@ async function contextLines(userId) {
       /* calendar not reachable right now: suggestions use the rest */
     }
   }
-  if (features.memory && prefs.memory) {
+  if (sources.memory) {
     for (const memory of listMemories(userId).slice(0, 8)) lines.push(`Memory: ${memory.text}`);
   }
   const chats = db.prepare(`
@@ -65,8 +74,8 @@ function parseItems(text) {
   return items.length ? items : null;
 }
 
-async function build(userId) {
-  const lines = await contextLines(userId);
+async function build(userId, sources) {
+  const lines = await contextLines(userId, sources);
   if (!lines.length) return STARTERS.map((text) => ({ text, source: "general", fallback: true }));
   try {
     const reply = await callModel([
@@ -74,7 +83,7 @@ async function build(userId) {
         role: "system",
         content: "Suggest what the user might ask their personal assistant next, from the context. "
           + "Reply with only a JSON array of 4 objects: {\"text\": a request in the user's words, under 60 characters, "
-          + "\"source\": \"calendar\", \"memory\", \"chat\" or \"general\"}. Write the texts in " + (getPrefs(userId).uiLanguage === "en" ? "English" : "German") + ". Invent nothing.",
+          + "\"source\": \"calendar\", \"memory\", \"chat\" or \"general\"}. Write the texts in " + (sources.uiLanguage === "en" ? "English" : "German") + ". Invent nothing.",
       },
       { role: "user", content: lines.join("\n").slice(0, 3000) },
     ], { role: "chat", userId, maxTokens: 260, temperature: 0.5 });
@@ -87,9 +96,26 @@ async function build(userId) {
 }
 
 export async function suggestionsFor(userId) {
+  const sources = sourceState(userId);
+  const sourceKey = JSON.stringify(sources);
   const hit = cache.get(userId);
-  if (hit && hit.until > Date.now()) return hit.items;
-  const items = await build(userId);
-  cache.set(userId, { items, until: Date.now() + TTL_MS });
-  return items;
+  if (hit && hit.sourceKey === sourceKey && hit.until > Date.now()) return hit.items;
+
+  const inFlightKey = `${userId}:${sourceKey}`;
+  const pending = inFlight.get(inFlightKey);
+  if (pending) return pending;
+
+  const promise = (async () => {
+    const items = await build(userId, sources);
+    if (JSON.stringify(sourceState(userId)) === sourceKey) {
+      cache.set(userId, { items, sourceKey, until: Date.now() + TTL_MS });
+    }
+    return items;
+  })();
+  inFlight.set(inFlightKey, promise);
+  try {
+    return await promise;
+  } finally {
+    if (inFlight.get(inFlightKey) === promise) inFlight.delete(inFlightKey);
+  }
 }

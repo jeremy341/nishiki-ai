@@ -82,10 +82,19 @@ export async function storeUpload({ userId, name, mime, base64 }) {
   const dir = path.join(FILES_DIR, String(userId));
   fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, randomBytes(16).toString("hex"));
-  fs.writeFileSync(file, data, { mode: 0o600 });
-  const { lastInsertRowid } = db.prepare(
-    "INSERT INTO attachments (user_id, kind, mime, name, size, data, path, text) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-  ).run(userId, type.kind, mime, cleanName, data.length, Buffer.alloc(0), file, text);
+  if (usedBytes() + data.length > LIMIT_BYTES) {
+    throw new AppError(413, "The file storage on the server is full. Delete files in the Library to make room.");
+  }
+  let lastInsertRowid;
+  try {
+    fs.writeFileSync(file, data, { mode: 0o600 });
+    ({ lastInsertRowid } = db.prepare(
+      "INSERT INTO attachments (user_id, kind, mime, name, size, data, path, text) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    ).run(userId, type.kind, mime, cleanName, data.length, Buffer.alloc(0), file, text));
+  } catch (error) {
+    removeFile(file);
+    throw error;
+  }
   return { id: Number(lastInsertRowid), kind: type.kind, mime, name: cleanName, size: data.length };
 }
 

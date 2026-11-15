@@ -40,16 +40,36 @@ export function acceptInvite(token, { username, password }) {
   if (!findOpenInvite(token)) throw new AppError(404, "This invite link is no longer valid. Ask for a new one.");
   const name = username.trim().toLowerCase();
   if (!USERNAME.test(name)) throw new AppError(400, "Usernames: 2-20 letters, digits, - or _.");
-  if (db.prepare("SELECT id FROM users WHERE username = ?").get(name)) {
-    throw new AppError(409, "That username is taken. Choose another.");
+  const passwordHash = hashPassword(password);
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const invite = findOpenInvite(token);
+    if (!invite) throw new AppError(404, "This invite link is no longer valid. Ask for a new one.");
+    if (db.prepare("SELECT id FROM users WHERE username = ?").get(name)) {
+      throw new AppError(409, "That username is taken. Choose another.");
+    }
+    if (accountCount() >= config.maxUsers) {
+      throw new AppError(409, "Nishiki is full. Ask the admin for more room.");
+    }
+
+    const { lastInsertRowid } = db.prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)")
+      .run(name, passwordHash);
+    const id = Number(lastInsertRowid);
+    const used = db.prepare(`
+      UPDATE invites SET used_at = datetime('now'), used_by = ?
+      WHERE id = ? AND used_at IS NULL AND expires_at > ?
+    `).run(id, invite.id, Date.now());
+    if (!used.changes) throw new AppError(404, "This invite link is no longer valid. Ask for a new one.");
+    db.exec("COMMIT");
+    return { id, username: name, isAdmin: false };
+  } catch (error) {
+    try {
+      db.exec("ROLLBACK");
+    } catch {
+      /* the transaction may already have been rolled back */
+    }
+    throw error;
   }
-  if (accountCount() >= config.maxUsers) throw new AppError(409, "Nishiki is full. Ask the admin for more room.");
-  const { lastInsertRowid } = db.prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)")
-    .run(name, hashPassword(password));
-  const id = Number(lastInsertRowid);
-  db.prepare("UPDATE invites SET used_at = datetime('now'), used_by = ? WHERE token_hash = ?")
-    .run(id, hashToken(token));
-  return { id, username: name, isAdmin: false };
 }
 
 invitesApi.get("/invites/:token", (req, res) => {

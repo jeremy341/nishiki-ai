@@ -118,8 +118,11 @@ async function readHeaders(creds, { sinceUid = 0, limit = 15 } = {}) {
     const total = client.mailbox.exists || 0;
     if (!total) return [];
     const from = sinceUid ? sinceUid + 1 : Math.max(1, total - limit + 1);
+    // `total` is a sequence count, not the highest UID. Use a sequence range for
+    // inbox reads and UID mode only for incremental report reads.
+    const fetchOptions = sinceUid ? { uid: true } : undefined;
     const headers = [];
-    for await (const message of client.fetch(`${from}:*`, { uid: true, envelope: true, flags: true }, { uid: true })) {
+    for await (const message of client.fetch(`${from}:*`, { uid: true, envelope: true, flags: true }, fetchOptions)) {
       if (message.uid <= sinceUid) continue;
       headers.push({
         uid: message.uid,
@@ -129,7 +132,7 @@ async function readHeaders(creds, { sinceUid = 0, limit = 15 } = {}) {
         seen: Boolean(message.flags?.has("\\Seen")),
       });
     }
-    return headers.sort((a, b) => b.uid - a.uid).slice(0, limit);
+    return headers.sort((a, b) => sinceUid ? a.uid - b.uid : b.uid - a.uid).slice(0, limit);
   } finally {
     lock?.release();
     await client.logout().catch(() => client.close());
@@ -180,7 +183,19 @@ export async function sendNtfy(topic, title, message) {
 
 // One report run for one user. The first run only records where the inbox is, so the
 // user is not flooded with old mail.
-export async function runMailReport(userId, {
+const reportRuns = new Map();
+
+export function runMailReport(userId, options = {}) {
+  const inFlight = reportRuns.get(userId);
+  if (inFlight) return inFlight;
+  const promise = runMailReportOnce(userId, options);
+  reportRuns.set(userId, promise);
+  return promise.finally(() => {
+    if (reportRuns.get(userId) === promise) reportRuns.delete(userId);
+  });
+}
+
+async function runMailReportOnce(userId, {
   fetchHeaders = fetchInboxHeaders,
   notify = sendNtfy,
 } = {}) {

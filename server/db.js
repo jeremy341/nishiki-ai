@@ -98,6 +98,13 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE INDEX IF NOT EXISTS usage_user_idx ON usage(user_id, created_at);
+  -- One row per spoken turn in voice mode, to keep the cost of voice in check (VOICE_DAILY_TURNS).
+  CREATE TABLE IF NOT EXISTS voice_turns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS voice_turns_idx ON voice_turns(user_id, created_at);
 
   -- Mail and notification settings, one row per user. Secrets are encrypted.
   CREATE TABLE IF NOT EXISTS mail_settings (
@@ -217,6 +224,8 @@ addColumnIfMissing("messages", "sources", "TEXT");
 addColumnIfMissing("messages", "widgets", "TEXT");
 // Short, human summary of what the assistant used for an answer, e.g. "Searched your Gmail".
 addColumnIfMissing("messages", "activity", "TEXT");
+// What the model thought before answering (only when the stronger model was used), shown folded away under the answer.
+addColumnIfMissing("messages", "thinking", "TEXT");
 // Uploads are kept as files on the server's disk (path); older ones stay in the database (data).
 addColumnIfMissing("attachments", "path", "TEXT");
 // Plain text of Word, CSV and text files, read once at upload.

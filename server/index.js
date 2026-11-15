@@ -69,8 +69,15 @@ app.use(helmet({
     },
   },
 }));
-// Large enough for one base64-encoded 6 MB attachment; every other route is tiny.
-app.use(express.json({ limit: "9mb" }));
+// Keep ordinary requests small. The three large JSON endpoints install their own
+// parser after authentication and rate limiting.
+const largeJsonPaths = new Set(["/api/attachments", "/api/voice/turn", "/api/transcribe"]);
+const smallJsonParser = express.json({ limit: "128kb" });
+app.use((req, res, next) => {
+  const routePath = req.path.replace(/\/+$/, "") || "/";
+  if (largeJsonPaths.has(routePath)) return next();
+  return smallJsonParser(req, res, next);
+});
 app.use("/api", requireJson);
 
 const limit = (windowMs, max) => rateLimit({
@@ -135,6 +142,7 @@ function messageRow(row, attachments = []) {
     sources: parseSources(row.sources),
     widgets: parseWidgets(row.widgets),
     activity: parseList(row.activity),
+    thinking: row.thinking || "",
   };
 }
 
@@ -280,7 +288,7 @@ function pickPrefs({ theme, readAloud, voice, uiLanguage, uiStyle, sounds, hapti
 
 // ---- attachments (photos and PDFs) ----
 
-app.post("/api/attachments", requireUser, uploadLimiter, async (req, res) => {
+app.post("/api/attachments", requireUser, uploadLimiter, express.json({ limit: "9mb" }), async (req, res) => {
   const { name, mime, data } = parse(z.object({
     name: z.string().trim().min(1).max(200),
     mime: z.string().min(3).max(100),
@@ -313,7 +321,7 @@ app.get("/api/attachments/:id", requireUser, (req, res) => {
   res.set({
     "Content-Type": row.mime,
     "Content-Disposition": "inline",
-    "Cache-Control": "private, max-age=86400",
+    "Cache-Control": "private, no-store",
   });
   res.send(row.data);
 });
@@ -322,7 +330,7 @@ app.get("/api/attachments/:id", requireUser, (req, res) => {
 
 // Search over the user's chats: titles, and the text of every message.
 function snippetAround(text, q) {
-  const clean = String(text || "").replace(/s+/g, " ");
+  const clean = String(text || "").replace(/\s+/g, " ");
   const at = clean.toLowerCase().indexOf(q.toLowerCase());
   const start = Math.max(0, (at < 0 ? 0 : at) - 60);
   return (start > 0 ? "…" : "") + clean.slice(start, start + 160);
@@ -437,7 +445,7 @@ app.post("/api/notes", requireUser, (req, res) => {
 app.get("/api/conversations/:id/messages", requireUser, (req, res) => {
   const id = ownConversation(req.user.id, req.params.id);
   const rows = db.prepare(
-    "SELECT id, role, content, created_at, sources, widgets, activity FROM messages WHERE conversation_id = ? ORDER BY id DESC LIMIT 2000",
+    "SELECT id, role, content, created_at, sources, widgets, activity, thinking FROM messages WHERE conversation_id = ? ORDER BY id DESC LIMIT 2000",
   ).all(id).reverse();
   const files = attachmentsByMessage(id);
   res.json({
@@ -470,9 +478,9 @@ async function handleMessage(req, hooks = {}) {
     const names = (attachmentsByMessage(conversationId).get(userMessageId) || []).map((f) => f.name);
     const { assistantId, actionIds } = await answerConversation({
       userId, conversationId, useCalendar, titleMessage: message, attachmentNames: names, userMessageId, voice: Boolean(voice),
-      onText: hooks.onText, onReset: hooks.onReset,
+      onText: hooks.onText, onReset: hooks.onReset, onThinking: hooks.onThinking,
     });
-    const row = db.prepare("SELECT id, role, content, created_at, sources, widgets, activity FROM messages WHERE id = ?").get(assistantId);
+    const row = db.prepare("SELECT id, role, content, created_at, sources, widgets, activity, thinking FROM messages WHERE id = ?").get(assistantId);
     return {
       message: messageRow(row, attachmentsByMessage(conversationId).get(assistantId) || []),
       actions: pendingByIds(actionIds),
@@ -491,6 +499,7 @@ app.post("/api/conversations/:id/messages", requireUser, chatLimiter, async (req
 
 // The same, but the reply arrives as server-sent events while it is written:
 //   data: {"type":"delta","text":"..."}   a piece of the answer
+//   data: {"type":"thinking","text":"..."}   a piece of the model's thinking (stronger model only)
 //   data: {"type":"reset"}                the words so far were only a lead-in to a tool call
 //   data: {"type":"done", message, actions}   the finished, saved answer
 //   data: {"type":"error","error":"...","status":502}
@@ -510,6 +519,7 @@ app.post("/api/conversations/:id/messages/stream", requireUser, chatLimiter, asy
     const result = await handleMessage(req, {
       onText: (text) => send({ type: "delta", text }),
       onReset: () => send({ type: "reset" }),
+      onThinking: (text) => send({ type: "thinking", text }),
     });
     send({ type: "done", ...result });
   } catch (error) {
@@ -526,7 +536,7 @@ app.post("/api/conversations/:id/messages/stream", requireUser, chatLimiter, asy
 // The whole conversation as the chat screen needs it.
 function messagesFor(userId, conversationId) {
   const rows = db.prepare(
-    "SELECT id, role, content, created_at, sources, widgets, activity FROM messages WHERE conversation_id = ? ORDER BY id DESC LIMIT 2000",
+    "SELECT id, role, content, created_at, sources, widgets, activity, thinking FROM messages WHERE conversation_id = ? ORDER BY id DESC LIMIT 2000",
   ).all(conversationId).reverse();
   const files = attachmentsByMessage(conversationId);
   return {
@@ -675,7 +685,7 @@ app.post("/api/tts", requireUser, voiceLimiter, async (req, res) => {
 
 // Fast voice mode: the recording goes in, speech streams back as server-sent events (see voice.js), and
 // the exchange is saved in the chat. The last event is { type: "done", messages, actions } or an error.
-app.post("/api/voice/turn", requireUser, chatLimiter, async (req, res) => {
+app.post("/api/voice/turn", requireUser, chatLimiter, express.json({ limit: "9mb" }), async (req, res) => {
   const { conversationId, audio } = parse(z.object({
     conversationId: z.number().int().positive().nullable().optional(),
     audio: z.string().min(100).max(6_500_000),
@@ -686,6 +696,13 @@ app.post("/api/voice/turn", requireUser, chatLimiter, async (req, res) => {
   if (!isWav) throw new AppError(400, "Audio must be a WAV file.");
   const userId = req.user.id;
   let id = conversationId ? ownConversation(userId, conversationId) : null;
+  if (config.voice.dailyTurns > 0) {
+    const used = db.prepare("SELECT COUNT(*) AS n FROM voice_turns WHERE user_id = ? AND created_at > datetime('now', '-24 hours')").get(userId).n;
+    if (used >= config.voice.dailyTurns) {
+      throw new AppError(429, "The daily limit for voice conversations is reached. Typing in the chat still works, and voice is available again later.");
+    }
+  }
+  db.prepare("INSERT INTO voice_turns (user_id) VALUES (?)").run(userId);
 
   res.set({
     "Content-Type": "text/event-stream; charset=utf-8",
@@ -704,7 +721,7 @@ app.post("/api/voice/turn", requireUser, chatLimiter, async (req, res) => {
       emit({ type: "conversation", conversation: conversationRow(row) });
     }
     const result = await runVoiceTurn({ userId, conversationId: id, wav: audio, emit });
-    const rows = db.prepare("SELECT id, role, content, created_at, sources, widgets, activity FROM messages WHERE id IN (?, ?) ORDER BY id")
+    const rows = db.prepare("SELECT id, role, content, created_at, sources, widgets, activity, thinking FROM messages WHERE id IN (?, ?) ORDER BY id")
       .all(result.userMessageId, result.assistantId);
     const files = attachmentsByMessage(id);
     emit({ type: "done", messages: rows.map((row) => messageRow(row, files.get(row.id) || [])), actions: pendingByIds(result.actionIds) });
@@ -719,7 +736,7 @@ app.post("/api/voice/turn", requireUser, chatLimiter, async (req, res) => {
 });
 
 // Speech-to-text. Audio must be WAV; up to about 2 minutes of 16 kHz mono speech.
-app.post("/api/transcribe", requireUser, transcribeLimiter, async (req, res) => {
+app.post("/api/transcribe", requireUser, transcribeLimiter, express.json({ limit: "9mb" }), async (req, res) => {
   const { audio } = parse(z.object({ audio: z.string().min(100).max(6_500_000) }), req.body);
   const bytes = Buffer.from(audio, "base64");
   const isWav = bytes.length > 44 && bytes.subarray(0, 4).toString("ascii") === "RIFF"

@@ -9,7 +9,7 @@ import { api, apiStream } from "./api.js";
 import Sidebar, { SidebarBrand } from "./chat/Sidebar.jsx";
 import { MoveDialog, ProjectDialog } from "./chat/ProjectDialog.jsx";
 import Composer from "./chat/Composer.jsx";
-import Message from "./chat/Message.jsx";
+import Message, { ThoughtBlock } from "./chat/Message.jsx";
 import { kindFor, MAX_BYTES, PICKER_ACCEPT, uploadFile } from "./files.js";
 import Home from "./Home.jsx";
 import { configureFeedback, dropSound, haptic } from "./feedback.js";
@@ -57,6 +57,17 @@ const readActiveId = () => {
     return null;
   }
 };
+// Which screen an address belongs to.
+function routeOf(pathname) {
+  let m = pathname.match(/^\/chat\/(\d+)\/?$/);
+  if (m) return { kind: "chat", id: Number(m[1]) };
+  m = pathname.match(/^\/settings(?:\/([a-z-]+))?\/?$/);
+  if (m) return { kind: "settings", page: m[1] || null };
+  m = pathname.match(/^\/(library|tasks|calendar)\/?$/);
+  if (m) return { kind: m[1] };
+  return { kind: "home" };
+}
+
 const writeActiveId = (id) => {
   try {
     if (id) window.localStorage.setItem("activeChat", String(id));
@@ -93,7 +104,8 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
   const [busy, setBusy] = useState(false);
   // The answer while it is being written. Empty when nothing is streaming.
   const [streamText, setStreamText] = useState("");
-  const streamRef = useRef({ text: "", frame: 0 });
+  const [streamThinking, setStreamThinking] = useState(""); // the stronger model's thinking while it is written
+  const streamRef = useRef({ text: "", thinking: "", frame: 0 });
   const [error, setError] = useState("");
   const [micState, setMicState] = useState("idle"); // idle | recording | transcribing
   const [speaking, setSpeaking] = useState(false);
@@ -168,19 +180,67 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
   const showHome = messages.length === 0 && !busy && !loadingChat;
   const lastAnswerId = [...messages].reverse().find((m) => m.role === "assistant" && typeof m.id === "number")?.id;
 
+  // ---- the address bar follows the screen: /chat/12, /settings, /settings/apps, /library, /tasks, /calendar ----
+  // Back and forward work, and a link opens straight to the right place.
+  const [routeReady, setRouteReady] = useState(false);
+  const routeSynced = useRef(false);
+
+  function applyRoute(route) {
+    setVoiceOpen(false);
+    setSettingsOpen(route.kind === "settings");
+    if (route.kind === "settings") setSettingsPage(route.page || null);
+    setLibraryOpen(route.kind === "library");
+    setTasksOpen(route.kind === "tasks");
+    setCalendarOpen(route.kind === "calendar");
+    if (route.kind === "chat") {
+      if (activeRef.current !== route.id) selectConversation(route.id);
+    } else if (route.kind === "home") {
+      if (activeRef.current !== null) newChat();
+    }
+  }
+  const applyRouteRef = useRef(applyRoute);
+  applyRouteRef.current = applyRoute;
+
+  useEffect(() => {
+    const onPop = () => applyRouteRef.current(routeOf(window.location.pathname));
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  useEffect(() => {
+    if (!routeReady) return;
+    const path = voiceOpen ? "/voice"
+      : settingsOpen ? (settingsPage ? `/settings/${settingsPage}` : "/settings")
+        : libraryOpen ? "/library"
+          : tasksOpen ? "/tasks"
+            : calendarOpen ? "/calendar"
+              : activeId ? `/chat/${activeId}` : "/";
+    if (window.location.pathname === path) {
+      routeSynced.current = true;
+      return;
+    }
+    // The first sync only corrects the address; later changes are new history steps.
+    window.history[routeSynced.current ? "pushState" : "replaceState"]({}, "", path);
+    routeSynced.current = true;
+  }, [routeReady, activeId, settingsOpen, settingsPage, libraryOpen, tasksOpen, calendarOpen, voiceOpen]);
+
   useEffect(() => {
     refreshProjects();
     api("/api/conversations")
       .then((data) => {
         setConversations(data.conversations);
-        const stored = readActiveId();
-        const chosen = data.conversations.find((c) => c.id === stored);
+        const route = routeOf(window.location.pathname);
+        const wanted = route.kind === "chat" ? route.id : readActiveId();
+        const chosen = data.conversations.find((c) => c.id === wanted);
+        if (route.kind !== "home" && route.kind !== "chat") applyRoute(route);
+        setRouteReady(true);
         if (chosen) return selectConversation(chosen.id);
         setLoadingChat(false);
         return null;
       })
       .catch((err) => {
         setLoadingChat(false);
+        setRouteReady(true);
         handleError(err);
       });
     return () => {
@@ -555,9 +615,13 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
       // Pieces of the answer are shown at most once per screen frame.
       const stream = streamRef.current;
       stream.text = "";
+      stream.thinking = "";
       const flush = () => {
         stream.frame = 0;
-        if (activeRef.current === conversationId) setStreamText(stream.text);
+        if (activeRef.current === conversationId) {
+          setStreamText(stream.text);
+          setStreamThinking(stream.thinking);
+        }
       };
       const data = await apiStream(`/api/conversations/${conversationId}/messages/stream`, {
         message, attachmentIds: ids, useCalendar: calendarOn && useCalendar, voice: voice || undefined,
@@ -570,11 +634,17 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
           stream.text = "";
           if (!stream.frame) stream.frame = requestAnimationFrame(flush);
         },
+        onEvent: (event) => {
+          if (event.type !== "thinking") return;
+          stream.thinking += event.text;
+          if (!stream.frame) stream.frame = requestAnimationFrame(flush);
+        },
       });
       if (stream.frame) cancelAnimationFrame(stream.frame);
       stream.frame = 0;
       const streamed = Boolean(stream.text);
       setStreamText("");
+      setStreamThinking("");
       if (activeRef.current === conversationId) {
         setMessages((list) => [...list, streamed ? { ...data.message, key: "streaming" } : data.message]);
         if (!voice) dropSound("reply");
@@ -599,6 +669,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
       if (streamRef.current.frame) cancelAnimationFrame(streamRef.current.frame);
       streamRef.current.frame = 0;
       setStreamText("");
+      setStreamThinking("");
       setBusy(false);
     }
   }
@@ -914,7 +985,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
             <ChatSkeleton />
           ) : showHome ? null : (
             <div className="mx-auto flex max-w-3xl flex-col gap-[22px] px-5 pb-6 pt-[18px] md:px-6">
-              {(busy && streamText ? [...messages, { id: "streaming", role: "assistant", content: streamText }] : messages).map((m) => (
+              {(busy && streamText ? [...messages, { id: "streaming", role: "assistant", content: streamText, thinking: streamThinking }] : messages).map((m) => (
                 <Message
                   key={m.key ?? m.id}
                   message={m}
@@ -932,6 +1003,7 @@ export default function Chat({ session, notice, clearNotice, refreshSession, onS
                   <span className="caption">{t("Thinking…")}</span>
                 </div>
               )}
+              {busy && !streamText && streamThinking && <ThoughtBlock text={streamThinking} live />}
               {actions.length > 0 && (
                 <div className="grid gap-3" role="group" aria-label={t("Waiting for your confirmation")}>
                   {actions.map((a) => (
