@@ -150,6 +150,16 @@ async function calendarFetch(userId, path, init = {}) {
     accessCache.delete(userId);
     throw new AppError(502, "Google Calendar rejected the request. Try again.");
   }
+  if (response.status === 204) return null; // A successful DELETE has no JSON body.
+  if (response.status === 404 || response.status === 410) {
+    throw new AppError(404, "This calendar event no longer exists.");
+  }
+  if (response.status === 403) {
+    throw new AppError(403, "Google does not allow you to change this calendar event.");
+  }
+  if (response.status === 412) {
+    throw new AppError(409, "This event changed since you opened it. Reload and try again.");
+  }
   if (!response.ok) {
     // The reason Google gives (for example "Invalid value for: start.dateTime") helps to find the cause; it holds no personal data.
     const detail = await response.json().then((j) => `${j?.error?.errors?.[0]?.reason || ""} ${j?.error?.message || ""}`.trim()).catch(() => "");
@@ -177,6 +187,7 @@ export async function listUpcomingEvents(userId, days = 7) {
     start: event.start?.dateTime || event.start?.date || null,
     end: event.end?.dateTime || event.end?.date || null,
     allDay: Boolean(event.start?.date && !event.start?.dateTime),
+    recurringEventId: event.recurringEventId || null,
   }));
 }
 
@@ -193,6 +204,92 @@ export async function createEvent(userId, { title, start, end, timeZone }) {
     }),
   });
   return { id: event.id, title: event.summary, start: event.start?.dateTime, end: event.end?.dateTime };
+}
+
+
+// Event IDs always come from a Google Calendar lookup. Still validate them before putting them in a URL.
+function eventPath(eventId) {
+  if (typeof eventId !== "string" || !/^[A-Za-z0-9_-]{1,512}$/.test(eventId)) {
+    throw new AppError(400, "Invalid calendar event ID.");
+  }
+  return "/calendars/primary/events/" + encodeURIComponent(eventId);
+}
+
+function eventView(event) {
+  return {
+    id: event.id,
+    title: event.summary || "(no title)",
+    start: event.start?.dateTime || event.start?.date || null,
+    end: event.end?.dateTime || event.end?.date || null,
+    allDay: Boolean(event.start?.date && !event.start?.dateTime),
+    recurringEventId: event.recurringEventId || null,
+    etag: event.etag,
+  };
+}
+
+// A recurring instance has its own ID. For "series", resolve the parent event instead.
+export async function getCalendarEvent(userId, eventId, scope = "single") {
+  if (!["single", "series"].includes(scope)) throw new AppError(400, "Invalid recurrence scope.");
+  const occurrence = await calendarFetch(userId, eventPath(eventId));
+  if (!occurrence || occurrence.status === "cancelled") throw new AppError(404, "Calendar event not found.");
+  const target = scope === "series" && occurrence.recurringEventId
+    ? await calendarFetch(userId, eventPath(occurrence.recurringEventId))
+    : occurrence;
+  if (!target || target.status === "cancelled") throw new AppError(404, "Calendar event not found.");
+  return {
+    ...eventView(target),
+    scope: scope === "series" && (occurrence.recurringEventId || occurrence.recurrence) ? "series" : "single",
+    isRecurring: Boolean(occurrence.recurringEventId || occurrence.recurrence),
+    occurrenceId: occurrence.id,
+  };
+}
+
+// The supplied etag is a Google revision identifier; If-Match prevents stale confirmations.
+export async function updateCalendarEvent(userId, { id, etag, title, start, end, allDay, timeZone }) {
+  if (typeof etag !== "string" || !etag) throw new AppError(400, "Missing event revision.");
+  const body = {};
+  if (title !== undefined) {
+    if (typeof title !== "string" || !title.trim() || title.length > 200) {
+      throw new AppError(400, "The event needs a title (up to 200 characters).");
+    }
+    body.summary = title.trim();
+  }
+  if (start !== undefined || end !== undefined) {
+    if (typeof start !== "string" || typeof end !== "string" || end <= start) {
+      throw new AppError(400, "Start and end must be provided, with end after start.");
+    }
+    if (allDay) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)
+          || Number.isNaN(Date.parse(start)) || Number.isNaN(Date.parse(end))) {
+        throw new AppError(400, "All-day events need YYYY-MM-DD dates (the end date is exclusive).");
+      }
+      body.start = { date: start };
+      body.end = { date: end };
+    } else {
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(start)
+          || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(end)
+          || typeof timeZone !== "string" || !timeZone) {
+        throw new AppError(400, "Timed events need local date-times and a time zone.");
+      }
+      body.start = { dateTime: withSeconds(start), timeZone };
+      body.end = { dateTime: withSeconds(end), timeZone };
+    }
+  }
+  if (!Object.keys(body).length) throw new AppError(400, "Nothing to change.");
+  const event = await calendarFetch(userId, eventPath(id), {
+    method: "PATCH",
+    headers: { "If-Match": etag },
+    body: JSON.stringify(body),
+  });
+  return eventView(event);
+}
+
+export async function deleteCalendarEvent(userId, { id, etag }) {
+  if (typeof etag !== "string" || !etag) throw new AppError(400, "Missing event revision.");
+  await calendarFetch(userId, eventPath(id), {
+    method: "DELETE",
+    headers: { "If-Match": etag },
+  });
 }
 
 // ---- Gmail (read headers and snippets, send after Confirm) ----

@@ -5,24 +5,38 @@ import { api } from "./api.js";
 import KoiEmpty from "./ui/KoiEmpty.jsx";
 import KoiGlyph from "./ui/KoiGlyph.jsx";
 import WaveRule from "./ui/WaveRule.jsx";
-import { Button, Field, FullPage, Input } from "./ui/ui.jsx";
+import { Button, Field, FullPage, Input, Select } from "./ui/ui.jsx";
 
 const TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 function formatWhen(start, allDay) {
   if (!start) return "";
-  const date = new Date(start);
+  const date = new Date(allDay ? start + "T12:00:00" : start);
   if (allDay) return date.toLocaleDateString(currentLocale(), { weekday: "short", day: "numeric", month: "short" });
   return date.toLocaleString(currentLocale(), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-// Google Calendar: upcoming events, and new events that are only created after Confirm.
+// Use the browser's time zone for editing, not the UTC portion of the ISO string.
+function toEditInput(value, allDay) {
+  if (!value) return "";
+  if (allDay) return value.slice(0, 10);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("sv-SE", {
+    timeZone: TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).replace(" ", "T").slice(0, 16);
+}
+
+// Google Calendar: upcoming events, plus explicit edits and deletions of existing events.
 export default function CalendarPanel({ open, onOpenChange, google, onChanged }) {
   const connected = Boolean(google?.connected);
   const [events, setEvents] = useState(null);
   const [text, setText] = useState("");
   const [question, setQuestion] = useState("");
   const [proposal, setProposal] = useState(null);
+  const [selection, setSelection] = useState(null);
+  const [draft, setDraft] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -85,11 +99,83 @@ export default function CalendarPanel({ open, onOpenChange, google, onChanged })
     }
   }
 
+  // A recurring occurrence and its parent series are different Google events.
+  // Load the selected target from the server so its revision and original values are correct.
+  async function selectEvent(id, mode, scope = "single") {
+    setError("");
+    setSelection({ id, mode, scope, event: null });
+    setDraft(null);
+    setBusy(true);
+    try {
+      const data = await api("/api/calendar/events/" + encodeURIComponent(id) + "?scope=" + scope);
+      const ev = data.event;
+      setSelection({ id, mode, scope, event: ev });
+      setDraft({ title: ev.title, start: toEditInput(ev.start, ev.allDay), end: toEditInput(ev.end, ev.allDay) });
+    } catch (err) {
+      setError(err.message);
+      setSelection(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveSelected() {
+    if (!selection?.event || !draft) return;
+    const ev = selection.event;
+    const changedTitle = draft.title.trim() !== ev.title;
+    const changedTimes = draft.start !== toEditInput(ev.start, ev.allDay) || draft.end !== toEditInput(ev.end, ev.allDay);
+    if (!draft.title.trim()) return setError(t("The event needs a title."));
+    if (changedTimes && (!draft.start || !draft.end || draft.end <= draft.start)) {
+      return setError(t("The end must be after the start."));
+    }
+    if (!changedTitle && !changedTimes) return setError(t("No changes to save."));
+    setBusy(true);
+    setError("");
+    try {
+      const body = { confirmed: true, scope: selection.scope, etag: ev.etag, timeZone: TIME_ZONE };
+      if (changedTitle) body.title = draft.title.trim();
+      if (changedTimes) { body.start = draft.start; body.end = draft.end; }
+      await api("/api/calendar/events/" + encodeURIComponent(selection.id), { method: "PATCH", body });
+      toast.success(t("Calendar event updated"));
+      setSelection(null);
+      setDraft(null);
+      await loadEvents();
+      onChanged?.();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteSelected() {
+    if (!selection?.event) return;
+    setBusy(true);
+    setError("");
+    try {
+      await api("/api/calendar/events/" + encodeURIComponent(selection.id), {
+        method: "DELETE",
+        body: { confirmed: true, scope: selection.scope, etag: selection.event.etag },
+      });
+      toast.success(t("Calendar event deleted"));
+      setSelection(null);
+      setDraft(null);
+      await loadEvents();
+      onChanged?.();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function disconnect() {
     setBusy(true);
     try {
       await api("/api/google/disconnect", { method: "POST", body: {} });
       setEvents(null);
+      setSelection(null);
+      setDraft(null);
       toast.success(t("Google Calendar disconnected"));
       onChanged();
     } catch (err) {
@@ -124,14 +210,69 @@ export default function CalendarPanel({ open, onOpenChange, google, onChanged })
             {events && events.length > 0 && (
               <ul className="divide-y divide-border">
                 {events.map((ev, i) => (
-                  <li key={ev.id} className="grid min-h-14 content-center gap-1 py-3">
-                    <span className={`caption mono-num tabular-nums ${i === 0 ? "!text-accent" : ""}`}>{formatWhen(ev.start, ev.allDay)}</span>
-                    <span className="min-w-0 whitespace-normal break-words text-[15px]">{ev.title}</span>
+                  <li key={ev.id} className="flex min-h-14 flex-wrap items-center justify-between gap-2 py-3">
+                    <div className="min-w-0 flex-1">
+                      <span className={i === 0 ? "caption mono-num tabular-nums !text-accent" : "caption mono-num tabular-nums"}>{formatWhen(ev.start, ev.allDay)}</span>
+                      <p className="min-w-0 whitespace-normal break-words text-[15px]">{ev.title}</p>
+                      {ev.recurringEventId && <span className="caption">{t("Repeating event")}</span>}
+                    </div>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" disabled={busy} onClick={() => selectEvent(ev.id, "edit")}>{t("Edit")}</Button>
+                      <Button size="sm" variant="danger" disabled={busy} onClick={() => selectEvent(ev.id, "delete")}>{t("Delete")}</Button>
+                    </div>
                   </li>
                 ))}
               </ul>
             )}
           </section>
+
+          {selection && (
+            <section className="grid gap-4 rounded-lg border border-border-strong bg-surface p-4">
+              <h3 className="caption">{selection.mode === "edit" ? t("Edit calendar event") : t("Delete calendar event")}</h3>
+              {selection.event && draft ? (
+                <>
+                  <p className="text-[15px]">{selection.event.title}</p>
+                  {selection.event.isRecurring && (
+                    <Field label={t("Apply to")}>
+                      <Select value={selection.scope} disabled={busy} onChange={(e) => selectEvent(selection.id, selection.mode, e.target.value)}>
+                        <option value="single">{t("Only this occurrence")}</option>
+                        <option value="series">{t("Entire repeating series")}</option>
+                      </Select>
+                    </Field>
+                  )}
+                  {selection.mode === "edit" ? (
+                    <>
+                      <Field label={t("Title")}>
+                        <Input maxLength={200} value={draft.title} disabled={busy} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
+                      </Field>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <Field label={t("Start")}>
+                          <Input type={selection.event.allDay ? "date" : "datetime-local"} value={draft.start} disabled={busy} onChange={(e) => setDraft({ ...draft, start: e.target.value })} />
+                        </Field>
+                        <Field label={t("End")}>
+                          <Input type={selection.event.allDay ? "date" : "datetime-local"} value={draft.end} disabled={busy} onChange={(e) => setDraft({ ...draft, end: e.target.value })} />
+                        </Field>
+                      </div>
+                      {selection.event.allDay && <p className="caption">{t("All-day end dates are exclusive.")}</p>}
+                      <p className="caption">{t("Nothing changes until you confirm.")}</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="primary" disabled={busy} onClick={saveSelected}>{t("Save changes")}</Button>
+                        <Button disabled={busy} onClick={() => setSelection(null)}>{t("Cancel")}</Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-[15px]">{t("Delete this event? This cannot be undone.")}</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button variant="danger" disabled={busy} onClick={deleteSelected}>{t("Confirm deletion")}</Button>
+                        <Button disabled={busy} onClick={() => setSelection(null)}>{t("Cancel")}</Button>
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : <p className="caption">{t("Loading…")}</p>}
+            </section>
+          )}
 
           <WaveRule />
 

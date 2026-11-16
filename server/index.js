@@ -39,8 +39,8 @@ import {
 } from "./auth.js";
 import { AppError } from "./errors.js";
 import {
-  createEvent, disconnectGoogle, finishConnect, googleConfigured, googleStatus,
-  listUpcomingEvents, consumeState, startConnect,
+  createEvent, deleteCalendarEvent, disconnectGoogle, finishConnect, getCalendarEvent, googleConfigured, googleStatus,
+  listUpcomingEvents, consumeState, startConnect, updateCalendarEvent,
 } from "./google.js";
 import { serverTtsConfigured, synthesizeSpeech, ttsFormat } from "./tts.js";
 import { liveVoiceAvailable, runVoiceTurn, warmVoice } from "./voice.js";
@@ -799,6 +799,49 @@ app.post("/api/google/disconnect", requireUser, async (req, res) => {
 app.get("/api/calendar/events", requireUser, async (req, res) => {
   const events = await listUpcomingEvents(req.user.id, 7);
   res.json({ events });
+});
+
+// Existing events may be edited or deleted only after an explicit user confirmation.
+// Re-fetch the event before each change and check its Google revision to avoid stale edits.
+app.get("/api/calendar/events/:eventId", requireUser, async (req, res) => {
+  const scope = req.query.scope || "single";
+  const event = await getCalendarEvent(req.user.id, req.params.eventId, scope);
+  res.json({ event });
+});
+
+app.patch("/api/calendar/events/:eventId", requireUser, async (req, res) => {
+  const body = parse(z.object({
+    confirmed: z.literal(true),
+    scope: z.enum(["single", "series"]),
+    etag: z.string().min(1).max(250),
+    title: z.string().trim().min(1).max(200).optional(),
+    start: z.string().optional(),
+    end: z.string().optional(),
+    timeZone: z.string().min(1).max(64),
+  }), req.body);
+  if (!validTimeZone(body.timeZone)) throw new AppError(400, "Invalid time zone.");
+  if (body.title === undefined && body.start === undefined && body.end === undefined) {
+    throw new AppError(400, "Nothing to change.");
+  }
+  const current = await getCalendarEvent(req.user.id, req.params.eventId, body.scope);
+  if (current.etag !== body.etag) throw new AppError(409, "This event changed. Reload it before editing.");
+  const event = await updateCalendarEvent(req.user.id, {
+    id: current.id, etag: current.etag, title: body.title,
+    start: body.start, end: body.end, allDay: current.allDay, timeZone: body.timeZone,
+  });
+  res.json({ event });
+});
+
+app.delete("/api/calendar/events/:eventId", requireUser, async (req, res) => {
+  const body = parse(z.object({
+    confirmed: z.literal(true),
+    scope: z.enum(["single", "series"]),
+    etag: z.string().min(1).max(250),
+  }), req.body);
+  const current = await getCalendarEvent(req.user.id, req.params.eventId, body.scope);
+  if (current.etag !== body.etag) throw new AppError(409, "This event changed. Reload it before deleting.");
+  await deleteCalendarEvent(req.user.id, { id: current.id, etag: current.etag });
+  res.json({ ok: true });
 });
 
 app.post("/api/calendar/propose", requireUser, chatLimiter, async (req, res) => {
