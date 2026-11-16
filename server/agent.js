@@ -9,7 +9,7 @@ const MAX_STEPS = 6;
 // Smaller, faster models sometimes say they did something ("ich erinnere dich", "ich trag's ein") without
 // calling the tool that does it. That is a lie the person would only find out about too late, so such an
 // answer is sent back once with the instruction to call the tool.
-const ACTION_TOOLS = ["set_reminder", "calendar_add", "save_note", "schedule_task", "remember", "todoist_add_task"];
+const ACTION_TOOLS = ["set_reminder", "calendar_add", "calendar_update", "calendar_delete", "save_note", "schedule_task", "remember", "todoist_add_task"];
 const CLAIM = [
   /\bich\s+(erinnere\s+dich|trag(e|['’]s)\b[^.!?]{0,40}\bein|notiere\b|speichere\b|merke\s+(es|das)\s+vor)/i,
   /\bich\s+(habe|hab)\s+(dir\s+)?[^.!?]{0,50}(erinnerung|eingetragen|notiert|gespeichert|vorgemerkt|angelegt|eingerichtet|gesetzt)/i,
@@ -68,7 +68,7 @@ export async function runAgent(messages, ctx) {
         working.push({ role: "assistant", content: message.content });
         working.push({
           role: "user",
-          content: "(System note: you said you did it, but no tool was called, so nothing happened. Call the right tool now (set_reminder, calendar_add, save_note or schedule_task) with the details from the conversation. If you only meant to offer it, answer again in one sentence and do not say it is done.)",
+          content: "(System note: you said you did it, but no tool was called, so nothing happened. Call the right tool now (set_reminder, calendar_add, calendar_update, calendar_delete, save_note or schedule_task) with the details from the conversation. If you only meant to offer it, answer again in one sentence and do not say it is done.)",
         });
         ctx.onReset?.();
         continue;

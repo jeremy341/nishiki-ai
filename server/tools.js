@@ -3,7 +3,7 @@ import { storeUpload } from "./attachments.js";
 import { config } from "./config.js";
 import { db } from "./db.js";
 import { AppError } from "./errors.js";
-import { createEvent, driveSearch, gmailSearch, gmailSend, listUpcomingEvents } from "./google.js";
+import { createEvent, deleteCalendarEvent, driveSearch, getCalendarEvent, gmailSearch, gmailSend, listUpcomingEvents, updateCalendarEvent } from "./google.js";
 import {
   convertCurrency, findPlace, githubInbox, notionSearch, routeBetween, todoistAddTask, todoistTasks,
   weatherForecast, wikipediaSummary,
@@ -88,6 +88,37 @@ const SPECS = [
         end: { type: "string", description: "Local end, YYYY-MM-DDTHH:mm." },
       },
       required: ["title", "start", "end"],
+      additionalProperties: false,
+    },
+    app: "calendar",
+  },
+  {
+    name: "calendar_update",
+    description: "Propose editing an existing Google Calendar event. First call calendar_upcoming to find its exact ID; never guess IDs. The user must Confirm. For a repeating event scope=single changes one instance, scope=series changes the entire series. Provide the changed title and/or BOTH start and end. For timed events use YYYY-MM-DDTHH:mm local; for all-day events use YYYY-MM-DD (end exclusive).",
+    parameters: {
+      type: "object",
+      properties: {
+        event_id: { type: "string", description: "Exact event ID returned by calendar_upcoming." },
+        scope: { type: "string", enum: ["single", "series"], description: "Default single; ask if the user's recurrence intent is unclear." },
+        title: { type: "string", maxLength: 200 },
+        start: { type: "string" },
+        end: { type: "string" },
+      },
+      required: ["event_id"],
+      additionalProperties: false,
+    },
+    app: "calendar",
+  },
+  {
+    name: "calendar_delete",
+    description: "Propose deleting an existing Google Calendar event. First call calendar_upcoming and use its exact event ID; never guess IDs. The user must Confirm. For a recurring event, scope=single removes one occurrence and scope=series removes the entire series. Ask which if unclear.",
+    parameters: {
+      type: "object",
+      properties: {
+        event_id: { type: "string", description: "Exact event ID returned by calendar_upcoming." },
+        scope: { type: "string", enum: ["single", "series"], description: "Default single." },
+      },
+      required: ["event_id"],
       additionalProperties: false,
     },
     app: "calendar",
@@ -618,6 +649,38 @@ const HANDLERS = {
     });
   },
 
+  async calendar_update(args, ctx) {
+    const event = await getCalendarEvent(ctx.userId, requireString(args.event_id, "event_id", 512), args.scope || "single");
+    const title = args.title === undefined ? undefined : requireString(args.title, "title", 200);
+    let start;
+    let end;
+    if (args.start !== undefined || args.end !== undefined) {
+      start = event.allDay ? String(args.start || "") : normalizeLocalTime(args.start);
+      end = event.allDay ? String(args.end || "") : normalizeLocalTime(args.end);
+      if (!(event.allDay ? /^\d{4}-\d{2}-\d{2}$/.test(start) && /^\d{4}-\d{2}-\d{2}$/.test(end) : LOCAL_TIME.test(start) && LOCAL_TIME.test(end)) || end <= start) {
+        throw new AppError(400, "Both start and end are required in local time, with end after start.");
+      }
+    }
+    if (title === undefined && start === undefined) throw new AppError(400, "Specify what to change.");
+    const scopeLabel = event.scope === "series" ? "Entire series" : "This event only";
+    return addPending(ctx, {
+      kind: "calendar_update",
+      title: tr(ctx.userId, "Edit “" + event.title + "”", "„" + event.title + "“ ändern"),
+      details: scopeLabel + " | " + event.start + " – " + event.end + " → " + (start || event.start) + " – " + (end || event.end) + (title ? " | " + event.title + " → " + title : ""),
+      payload: { id: event.id, etag: event.etag, title, start, end, allDay: event.allDay, timeZone: config.timezone },
+    });
+  },
+
+  async calendar_delete(args, ctx) {
+    const event = await getCalendarEvent(ctx.userId, requireString(args.event_id, "event_id", 512), args.scope || "single");
+    return addPending(ctx, {
+      kind: "calendar_delete",
+      title: tr(ctx.userId, "Delete “" + event.title + "”", "„" + event.title + "“ löschen"),
+      details: (event.scope === "series" ? "Entire series" : "This event only") + " | " + event.start,
+      payload: { id: event.id, etag: event.etag, title: event.title, scope: event.scope },
+    });
+  },
+
   async create_pdf(args, ctx) {
     const title = requireString(args.title, "title", 200);
     const body = requireString(args.body, "body", 30000);
@@ -837,6 +900,8 @@ const ACTIVITY = {
   read_web_page: "Read a web page",
   calendar_upcoming: "Checked your calendar",
   calendar_add: "Drafted a calendar event",
+  calendar_update: "Drafted a calendar edit",
+  calendar_delete: "Drafted a calendar deletion",
   create_pdf: "Made a PDF",
   create_presentation: "Made a presentation",
   schedule_task: "Proposed a scheduled task",
@@ -901,6 +966,14 @@ export async function executeAction(action, userId) {
   if (action.kind === "calendar_add") {
     const event = await createEvent(userId, payload);
     return tr(userId, `Added “${event.title}” to your calendar.`, `„${event.title}“ wurde in deinen Kalender eingetragen.`);
+  }
+  if (action.kind === "calendar_update") {
+    const event = await updateCalendarEvent(userId, payload);
+    return tr(userId, "Updated “" + event.title + "” in your calendar.", "„" + event.title + "“ wurde im Kalender geändert.");
+  }
+  if (action.kind === "calendar_delete") {
+    await deleteCalendarEvent(userId, payload);
+    return tr(userId, "Deleted “" + payload.title + "” from your calendar.", "„" + payload.title + "“ wurde aus deinem Kalender gelöscht.");
   }
   if (action.kind === "task_create") {
     const task = createTask(userId, payload);
